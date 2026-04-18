@@ -1,27 +1,173 @@
-"""LLM client implementation using LiteLLM."""
+"""LLM client implementation using LiteLLM with multi-provider support."""
 
-from typing import Optional
+import os
+from typing import Optional, Generator
 import litellm
 from ..config import config
 
 
+# Model name mapping for LiteLLM
+# LiteLLM uses specific prefixes for different providers
+MODEL_MAPPING = {
+    # OpenAI
+    "gpt-4o": "gpt-4o",
+    "gpt-4-turbo": "gpt-4-turbo",
+    "gpt-4": "gpt-4",
+    "gpt-3.5-turbo": "gpt-3.5-turbo",
+    
+    # Anthropic
+    "claude-3-opus": "claude-3-opus-20240229",
+    "claude-3-sonnet": "claude-3-sonnet-20240229",
+    "claude-3-haiku": "claude-3-haiku-20240307",
+    
+    # 智谱 GLM (Zhipu)
+    "glm-4": "zhipu/glm-4",
+    "glm-4v": "zhipu/glm-4v",
+    "glm-3-turbo": "zhipu/glm-3-turbo",
+    
+    # 通义千问 (Qwen / DashScope)
+    "qwen-max": "dashscope/qwen-max",
+    "qwen-plus": "dashscope/qwen-plus",
+    "qwen-turbo": "dashscope/qwen-turbo",
+    "qwen-vl-max": "dashscope/qwen-vl-max",
+    
+    # DeepSeek
+    "deepseek-chat": "deepseek/deepseek-chat",
+    "deepseek-coder": "deepseek/deepseek-coder",
+    
+    # 百度文心 (ERNIE)
+    "ernie-4.0": "ernie/ernie-4.0-8k",
+    "ernie-3.5-turbo": "ernie/ernie-3.5-8k",
+    
+    # 月之暗面 Kimi (Moonshot)
+    "moonshot-v1-8k": "moonshot/moonshot-v1-8k",
+    "moonshot-v1-32k": "moonshot/moonshot-v1-32k",
+    "moonshot-v1-128k": "moonshot/moonshot-v1-128k",
+    
+    # 零一万物 (Yi)
+    "yi-large": "yi/yi-large",
+    "yi-medium": "yi/yi-medium",
+    "yi-spark": "yi/yi-spark",
+    
+    # 百川 (Baichuan)
+    "baichuan4": "baichuan/Baichuan4",
+    "baichuan3-turbo": "baichuan/Baichuan3-Turbo",
+    
+    # 阶跃星辰 (StepFun)
+    "step-1-8k": "stepfun/step-1-8k",
+    "step-1-32k": "stepfun/step-1-32k",
+    "step-1v-8k": "stepfun/step-1v-8k",
+    
+    # MiniMax
+    "abab6.5-chat": "minimax/abab6.5-chat",
+    "abab5.5-chat": "minimax/abab5.5-chat",
+    
+    # 硅基流动 (SiliconFlow) - uses OpenAI-compatible API
+    "siliconflow-deepseek": "openai/deepseek-ai/DeepSeek-V2.5",
+    "siliconflow-qwen": "openai/Qwen/Qwen2.5-72B-Instruct",
+    
+    # Ollama (local)
+    "ollama-llama3": "ollama/llama3",
+    "ollama-qwen2": "ollama/qwen2",
+    "ollama-codellama": "ollama/codellama",
+}
+
+
+def _setup_api_keys():
+    """Configure API keys for all providers in environment."""
+    # OpenAI
+    if config.openai_api_key:
+        os.environ["OPENAI_API_KEY"] = config.openai_api_key
+    if config.openai_api_base != "https://api.openai.com/v1":
+        os.environ["OPENAI_API_BASE"] = config.openai_api_base
+    
+    # Anthropic
+    if config.anthropic_api_key:
+        os.environ["ANTHROPIC_API_KEY"] = config.anthropic_api_key
+    
+    # 智谱 GLM
+    if config.zhipu_api_key:
+        os.environ["ZHIPUAI_API_KEY"] = config.zhipu_api_key
+    
+    # 通义千问 DashScope
+    if config.dashscope_api_key:
+        os.environ["DASHSCOPE_API_KEY"] = config.dashscope_api_key
+    
+    # DeepSeek
+    if config.deepseek_api_key:
+        os.environ["DEEPSEEK_API_KEY"] = config.deepseek_api_key
+    
+    # 百度 ERNIE
+    if config.baidu_api_key:
+        os.environ["QIANFAN_AK"] = config.baidu_api_key
+    if config.baidu_secret_key:
+        os.environ["QIANFAN_SK"] = config.baidu_secret_key
+    
+    # 月之暗面 Moonshot
+    if config.moonshot_api_key:
+        os.environ["MOONSHOT_API_KEY"] = config.moonshot_api_key
+    
+    # 零一万物 Yi
+    if config.yi_api_key:
+        os.environ["YI_API_KEY"] = config.yi_api_key
+    
+    # 百川 Baichuan
+    if config.baichuan_api_key:
+        os.environ["BAICHUAN_API_KEY"] = config.baichuan_api_key
+    
+    # 阶跃星辰 StepFun
+    if config.stepfun_api_key:
+        os.environ["STEPFUN_API_KEY"] = config.stepfun_api_key
+    
+    # MiniMax
+    if config.minimax_api_key:
+        os.environ["MINIMAX_API_KEY"] = config.minimax_api_key
+    if config.minimax_group_id:
+        os.environ["MINIMAX_GROUP_ID"] = config.minimax_group_id
+    
+    # 硅基流动 SiliconFlow (OpenAI-compatible)
+    if config.siliconflow_api_key:
+        os.environ["SILICONFLOW_API_KEY"] = config.siliconflow_api_key
+
+
 class LLMClient:
-    """Unified LLM client supporting multiple providers."""
+    """Unified LLM client supporting multiple providers (15+ Chinese models)."""
     
     def __init__(self, model: Optional[str] = None):
         """
         Initialize LLM client.
         
         Args:
-            model: Model name (e.g., 'gpt-4o', 'claude-3-opus-20240229')
+            model: Model name (e.g., 'gpt-4o', 'glm-4', 'qwen-max', 'deepseek-chat')
         """
-        self.model = model or config.default_model
+        _setup_api_keys()
         
-        # Configure API keys
-        if config.openai_api_key:
-            litellm.api_key = config.openai_api_key
-        if config.anthropic_api_key:
-            litellm.anthropic_key = config.anthropic_api_key
+        raw_model = model or config.default_model
+        self.model = MODEL_MAPPING.get(raw_model, raw_model)
+        self.raw_model_name = raw_model
+        
+        # Configure LiteLLM settings
+        litellm.drop_params = True  # Drop unsupported params for providers
+        litellm.set_verbose = False
+    
+    @staticmethod
+    def list_available_models() -> dict[str, list[str]]:
+        """Return available models grouped by provider."""
+        return {
+            "OpenAI": ["gpt-4o", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"],
+            "Anthropic": ["claude-3-opus", "claude-3-sonnet", "claude-3-haiku"],
+            "智谱 GLM": ["glm-4", "glm-4v", "glm-3-turbo"],
+            "通义千问 Qwen": ["qwen-max", "qwen-plus", "qwen-turbo", "qwen-vl-max"],
+            "DeepSeek": ["deepseek-chat", "deepseek-coder"],
+            "百度文心 ERNIE": ["ernie-4.0", "ernie-3.5-turbo"],
+            "月之暗面 Kimi": ["moonshot-v1-8k", "moonshot-v1-32k", "moonshot-v1-128k"],
+            "零一万物 Yi": ["yi-large", "yi-medium", "yi-spark"],
+            "百川 Baichuan": ["baichuan4", "baichuan3-turbo"],
+            "阶跃星辰 Step": ["step-1-8k", "step-1-32k", "step-1v-8k"],
+            "MiniMax": ["abab6.5-chat", "abab5.5-chat"],
+            "硅基流动 SiliconFlow": ["siliconflow-deepseek", "siliconflow-qwen"],
+            "Ollama (本地)": ["ollama-llama3", "ollama-qwen2", "ollama-codellama"],
+        }
     
     def chat(
         self,
@@ -54,6 +200,8 @@ class LLMClient:
             messages=messages,
             temperature=temperature or config.temperature,
             max_tokens=max_tokens,
+            timeout=config.timeout,
+            num_retries=config.max_retries,
         )
         
         return response.choices[0].message.content
@@ -63,7 +211,7 @@ class LLMClient:
         message: str,
         system_prompt: Optional[str] = None,
         temperature: Optional[float] = None,
-    ):
+    ) -> Generator[str, None, None]:
         """
         Send a chat message and stream the response.
         
@@ -87,6 +235,7 @@ class LLMClient:
             messages=messages,
             temperature=temperature or config.temperature,
             stream=True,
+            timeout=config.timeout,
         )
         
         for chunk in response:
@@ -96,6 +245,14 @@ class LLMClient:
 
 # Global client instance (lazy initialization)
 _client: Optional[LLMClient] = None
+
+
+def get_client(model: Optional[str] = None) -> LLMClient:
+    """Get or create a global LLM client instance."""
+    global _client
+    if _client is None or (model and model != _client.raw_model_name):
+        _client = LLMClient(model=model)
+    return _client
 
 
 def get_llm_client(model: Optional[str] = None) -> LLMClient:
