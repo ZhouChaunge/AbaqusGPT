@@ -2,7 +2,7 @@
 
 import json
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List
 
 from fastapi import APIRouter, HTTPException
@@ -43,6 +43,7 @@ class ConversationCreate(BaseModel):
     """Request to create a conversation."""
     title: Optional[str] = None
     domain: str = "general"
+    messages: Optional[List[MessageItem]] = None
 
 
 class ConversationUpdate(BaseModel):
@@ -77,10 +78,14 @@ async def list_conversations():
     """List all conversations, newest first."""
     r = await get_redis()
     conv_ids = await r.lrange(CONV_LIST_KEY, 0, -1)
+    if not conv_ids:
+        return []
+
+    keys = [f"{CONV_PREFIX}{cid}" for cid in conv_ids]
+    raw_data = await r.mget(keys)
 
     conversations = []
-    for conv_id in conv_ids:
-        data = await r.get(f"{CONV_PREFIX}{conv_id}")
+    for data in raw_data:
         if data:
             conv = json.loads(data)
             conversations.append(ConversationSummary(
@@ -100,13 +105,13 @@ async def create_conversation(req: ConversationCreate):
     """Create a new conversation."""
     r = await get_redis()
     conv_id = str(uuid.uuid4())
-    now = datetime.utcnow().isoformat() + "Z"
+    now = datetime.now(timezone.utc).isoformat()
 
     conv = {
         "id": conv_id,
         "title": req.title or "新对话",
         "domain": req.domain,
-        "messages": [],
+        "messages": [m.model_dump() for m in req.messages] if req.messages else [],
         "created_at": now,
         "updated_at": now,
     }
@@ -146,7 +151,7 @@ async def update_conversation(conv_id: str, req: ConversationUpdate):
     if req.messages is not None:
         conv["messages"] = [m.model_dump() for m in req.messages]
 
-    conv["updated_at"] = datetime.utcnow().isoformat() + "Z"
+    conv["updated_at"] = datetime.now(timezone.utc).isoformat()
 
     await r.set(f"{CONV_PREFIX}{conv_id}", json.dumps(conv, ensure_ascii=False))
 

@@ -107,23 +107,17 @@ export default function ChatPage() {
             }),
           })
         } else {
-          // Create new
+          // Create new with messages in single request
           const title =
             msgs.find((m) => m.role === 'user')?.content.slice(0, 30) || '新对话'
           const res = await fetch('/api/v1/conversations/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title, domain: convDomain }),
+            body: JSON.stringify({ title, domain: convDomain, messages: serialized }),
           })
           if (res.ok) {
             const conv = await res.json()
             setActiveConvId(conv.id)
-            // Save messages into newly created conversation
-            await fetch(`/api/v1/conversations/${conv.id}`, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ messages: serialized }),
-            })
           }
         }
         await fetchConversations()
@@ -242,13 +236,16 @@ export default function ChatPage() {
       ])
     } finally {
       setIsLoading(false)
-      // Auto-save after response completes
-      setMessages((latestMsgs) => {
-        saveConversation(latestMsgs, domain, activeConvId)
-        return latestMsgs
-      })
     }
   }
+
+  // Auto-save after loading completes (response finished)
+  useEffect(() => {
+    if (!isLoading && messages.length > 0) {
+      saveConversation(messages, domain, activeConvId)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading])
 
   const clearChat = () => {
     if (activeConvId) {
