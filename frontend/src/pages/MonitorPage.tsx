@@ -320,7 +320,7 @@ function AgentSteps({ steps }: { steps: AgentStep[] }) {
         // === Merged tool_call + tool_result: terminal-style command block ===
         if (g.kind === 'command') {
           const isExpanded = expandedIdx.has(g.idx)
-          const fullOut = (g.result as Record<string, unknown>).full_output
+          const fullOut = g.result.full_output
           return (
             <div key={gi} className="rounded-lg border border-[#30363d] bg-[#0d1117] overflow-hidden text-xs">
               <div className="flex items-center gap-2 px-3 py-1 bg-[#161b22] border-b border-[#21262d]">
@@ -397,7 +397,7 @@ function AgentSteps({ steps }: { steps: AgentStep[] }) {
         // Standalone tool_result
         if (key === 'tool_result') {
           const isExpanded = expandedIdx.has(idx)
-          const fullOut = (step as Record<string, unknown>).full_output
+          const fullOut = step.full_output
           return (
             <div key={gi} className="rounded-lg border border-[#30363d] bg-[#0d1117] overflow-hidden text-xs">
               <div className={`px-3 py-1.5 flex items-center gap-2 ${fullOut ? 'cursor-pointer hover:bg-[#161b22]' : ''}`}
