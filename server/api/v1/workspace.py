@@ -873,6 +873,69 @@ TOOLS_SCHEMA = [
             },
         },
     },
+    # ── 领域 Agent 专业工具 / Domain Agent Tools ──
+    {
+        "type": "function",
+        "function": {
+            "name": "diagnose_convergence",
+            "description": "调用 ConvergeDoctor 专业诊断收敛问题。自动解析 .msg 和 .sta 文件，匹配 200+ 已知错误模式，返回结构化诊断报告（根因分析 + 修复建议）。比手动 grep 文件更准确、更全面。",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "job_dir": {"type": "string", "description": "作业所在目录的绝对路径，如 /workspace/project"},
+                    "job_name": {"type": "string", "description": "作业名称（不含扩展名），如 test_015"},
+                },
+                "required": ["job_dir", "job_name"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "analyze_mesh",
+            "description": "调用 MeshAdvisor 分析 INP 文件中的网格质量。返回单元数量、节点数量、单元类型、网格质量评估和优化建议。适用于检查网格是否合理、是否需要加密或改换单元类型。",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "inp_file": {"type": "string", "description": "INP 文件的绝对路径，如 /workspace/project/model.inp"},
+                },
+                "required": ["inp_file"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "generate_inp",
+            "description": "调用 InpGenerator 根据自然语言描述生成 Abaqus INP 文件或 Python 脚本。可生成完整的有限元模型输入文件，包含几何、材料、边界条件、加载步骤等。",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "description": {"type": "string", "description": "模型的自然语言描述，如'20x10x5mm 钢板，底部固定，顶面 10MPa 均布压力'"},
+                    "output_path": {"type": "string", "description": "输出文件路径（必须在 /workspace 下），如 /workspace/project/generated.inp"},
+                    "format": {"type": "string", "description": "输出格式：inp=Abaqus 输入文件，python=Abaqus Python 脚本", "enum": ["inp", "python"], "default": "inp"},
+                    "domain": {"type": "string", "description": "工程领域（可选），如 geotechnical、structural、mechanical 等"},
+                },
+                "required": ["description", "output_path"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "analyze_output",
+            "description": "解析 Abaqus 输出文件（.dat/.sta），提取关键结果数据。返回步骤信息、收敛历史、问题增量步识别等结构化结果。用于理解仿真结果和检查计算是否正常。",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "job_dir": {"type": "string", "description": "作业所在目录的绝对路径"},
+                    "job_name": {"type": "string", "description": "作业名称（不含扩展名）"},
+                    "output_type": {"type": "string", "description": "要分析的输出类型", "enum": ["convergence_history", "problem_increments", "full_status"], "default": "full_status"},
+                },
+                "required": ["job_dir", "job_name"],
+            },
+        },
+    },
 ]
 
 
@@ -1043,6 +1106,247 @@ async def run_tool(tool_name: str, params: dict, workspace_path: str) -> str:
             return f"权限不足: {path}"
         except Exception as e:
             return f"写入失败: {e}"
+
+    # ── 领域 Agent 工具 / Domain Agent Tools ──
+    elif tool_name == "diagnose_convergence":
+        job_dir = params.get("job_dir", "").strip()
+        job_name = params.get("job_name", "").strip()
+        if not job_dir or not job_name:
+            return "错误：job_dir 和 job_name 都是必填参数"
+
+        from abaqusgpt.agents.converge_doctor import ConvergeDoctor
+        from abaqusgpt.parsers.msg_parser import MsgParser
+        from abaqusgpt.parsers.sta_parser import StaParser
+
+        job_path = Path(job_dir)
+        msg_file = job_path / f"{job_name}.msg"
+        sta_file = job_path / f"{job_name}.sta"
+
+        result_parts = {"job_name": job_name, "diagnosis": {}}
+
+        # 解析 .msg 文件
+        if msg_file.exists():
+            try:
+                parser = MsgParser()
+                msg_data = parser.parse(msg_file)
+                result_parts["msg_analysis"] = msg_data
+                result_parts["msg_summary"] = parser.get_summary(msg_data)
+            except Exception as e:
+                result_parts["msg_error"] = str(e)
+        else:
+            result_parts["msg_status"] = f"文件不存在: {msg_file}"
+
+        # 解析 .sta 文件
+        if sta_file.exists():
+            try:
+                parser = StaParser()
+                sta_data = parser.parse(sta_file)
+                result_parts["sta_analysis"] = sta_data
+                # 识别问题增量步
+                problems = parser.identify_problem_increments(sta_data)
+                if problems:
+                    result_parts["problem_increments"] = problems
+            except Exception as e:
+                result_parts["sta_error"] = str(e)
+        else:
+            result_parts["sta_status"] = f"文件不存在: {sta_file}"
+
+        # 匹配已知错误模式
+        from abaqusgpt.knowledge.error_codes import ERROR_DATABASE
+        matched_errors = []
+        for error_text in result_parts.get("msg_analysis", {}).get("errors", []):
+            for pattern, info in ERROR_DATABASE.items():
+                if pattern.lower() in error_text.lower():
+                    matched_errors.append({
+                        "pattern": pattern,
+                        "category": info.get("category", "unknown"),
+                        "severity": info.get("severity", "unknown"),
+                        "causes": info.get("causes", []),
+                        "solutions": info.get("solutions", []),
+                    })
+                    break
+        if matched_errors:
+            result_parts["known_error_matches"] = matched_errors
+
+        return json.dumps(result_parts, ensure_ascii=False, default=str)
+
+    elif tool_name == "analyze_mesh":
+        inp_file = params.get("inp_file", "").strip()
+        if not inp_file:
+            return "错误：inp_file 是必填参数"
+
+        inp_path = Path(inp_file)
+        if not inp_path.exists():
+            return f"文件不存在: {inp_file}"
+
+        from abaqusgpt.parsers.inp_parser import InpParser
+
+        try:
+            parser = InpParser()
+            mesh_data = parser.parse_mesh(inp_path)
+
+            result = {
+                "file": inp_file,
+                "num_elements": mesh_data.get("num_elements", 0),
+                "num_nodes": mesh_data.get("num_nodes", 0),
+                "element_types": mesh_data.get("element_types", []),
+                "sections": mesh_data.get("sections", []),
+            }
+
+            # 基于规则的质量检查
+            quality_notes = []
+            elem_count = result["num_elements"]
+            node_count = result["num_nodes"]
+            if elem_count > 0 and node_count > 0:
+                ratio = node_count / elem_count
+                if ratio < 1.2:
+                    quality_notes.append("节点/单元比偏低，可能使用了低阶单元")
+                elif ratio > 3.0:
+                    quality_notes.append("节点/单元比偏高，可能使用了高阶单元或网格较稀疏")
+
+            for etype in result["element_types"]:
+                etype_upper = etype.upper()
+                if "R" in etype_upper and ("C3D" in etype_upper or "CPE" in etype_upper):
+                    quality_notes.append(f"单元 {etype} 为缩减积分单元，注意沙漏模式")
+                if "T" in etype_upper and "TET" not in etype_upper and "TRUSS" not in etype_upper:
+                    pass  # normal
+
+            if quality_notes:
+                result["quality_notes"] = quality_notes
+
+            return json.dumps(result, ensure_ascii=False, default=str)
+        except Exception as e:
+            return f"网格分析失败: {e}"
+
+    elif tool_name == "generate_inp":
+        description = params.get("description", "").strip()
+        output_path = params.get("output_path", "").strip()
+        fmt = params.get("format", "inp").strip()
+        domain = params.get("domain", "").strip()
+
+        if not description:
+            return "错误：description 是必填参数"
+        if not output_path:
+            return "错误：output_path 是必填参数"
+        if not output_path.startswith("/workspace"):
+            return f"安全限制：输出路径必须在 /workspace 下，拒绝: {output_path}"
+
+        from abaqusgpt.agents.inp_generator import InpGenerator
+
+        try:
+            generator = InpGenerator()
+            if domain:
+                description = f"[{domain} 领域] {description}"
+
+            content = generator.generate(description, format=fmt)
+
+            # 写入文件
+            out_path = Path(output_path)
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            out_path.write_text(content, encoding="utf-8")
+
+            ext = "inp" if fmt == "inp" else "py"
+            return json.dumps({
+                "success": True,
+                "output_path": output_path,
+                "format": fmt,
+                "size": out_path.stat().st_size,
+                "message": f"已生成 .{ext} 文件: {output_path}",
+            }, ensure_ascii=False)
+        except Exception as e:
+            return f"生成失败: {e}"
+
+    elif tool_name == "analyze_output":
+        job_dir = params.get("job_dir", "").strip()
+        job_name = params.get("job_name", "").strip()
+        output_type = params.get("output_type", "full_status").strip()
+
+        if not job_dir or not job_name:
+            return "错误：job_dir 和 job_name 都是必填参数"
+
+        from abaqusgpt.parsers.msg_parser import MsgParser
+        from abaqusgpt.parsers.sta_parser import StaParser
+
+        job_path = Path(job_dir)
+        result = {"job_name": job_name, "output_type": output_type}
+
+        sta_file = job_path / f"{job_name}.sta"
+        msg_file = job_path / f"{job_name}.msg"
+        dat_file = job_path / f"{job_name}.dat"
+
+        if output_type == "convergence_history":
+            if sta_file.exists():
+                try:
+                    parser = StaParser()
+                    sta_data = parser.parse(sta_file)
+                    result["convergence_history"] = parser.get_convergence_history(sta_data)
+                    result["total_increments"] = sta_data.get("total_increments", 0)
+                    result["completed"] = sta_data.get("completed", False)
+                except Exception as e:
+                    result["error"] = str(e)
+            else:
+                result["error"] = f"STA 文件不存在: {sta_file}"
+
+        elif output_type == "problem_increments":
+            if sta_file.exists():
+                try:
+                    parser = StaParser()
+                    sta_data = parser.parse(sta_file)
+                    result["problem_increments"] = parser.identify_problem_increments(sta_data)
+                    result["total_increments"] = sta_data.get("total_increments", 0)
+                except Exception as e:
+                    result["error"] = str(e)
+            else:
+                result["error"] = f"STA 文件不存在: {sta_file}"
+
+        else:  # full_status
+            # STA 分析
+            if sta_file.exists():
+                try:
+                    parser = StaParser()
+                    sta_data = parser.parse(sta_file)
+                    result["sta"] = {
+                        "total_increments": sta_data.get("total_increments", 0),
+                        "completed": sta_data.get("completed", False),
+                        "last_step": sta_data.get("last_step"),
+                        "last_increment": sta_data.get("last_increment"),
+                        "last_time": sta_data.get("last_time"),
+                    }
+                    problems = parser.identify_problem_increments(sta_data)
+                    if problems:
+                        result["problem_increments"] = problems[:10]
+                except Exception as e:
+                    result["sta_error"] = str(e)
+
+            # MSG 分析
+            if msg_file.exists():
+                try:
+                    parser = MsgParser()
+                    msg_data = parser.parse(msg_file)
+                    result["msg"] = {
+                        "errors": msg_data.get("errors", [])[:10],
+                        "warnings": msg_data.get("warnings", [])[:10],
+                        "last_step": msg_data.get("last_step"),
+                        "last_increment": msg_data.get("last_increment"),
+                        "total_iterations": msg_data.get("total_iterations", 0),
+                        "contact_issues": msg_data.get("contact_issues", [])[:5],
+                        "element_issues": msg_data.get("element_issues", [])[:5],
+                    }
+                except Exception as e:
+                    result["msg_error"] = str(e)
+
+            # DAT 文件存在性
+            result["dat_exists"] = dat_file.exists()
+            if dat_file.exists():
+                result["dat_size"] = dat_file.stat().st_size
+
+            # ODB 文件存在性
+            odb_file = job_path / f"{job_name}.odb"
+            result["odb_exists"] = odb_file.exists()
+            if odb_file.exists():
+                result["odb_size"] = odb_file.stat().st_size
+
+        return json.dumps(result, ensure_ascii=False, default=str)
 
     return f"未知工具: {tool_name}"
 
@@ -1303,12 +1607,19 @@ async def agent_chat(request: AgentChatRequest):
 4. **给出结论**：基于真实数据给出专业建议
 
 ## 你的工具
+### 基础工具
 - **shell_exec**: 在 Linux 容器内执行命令（grep、awk、wc 等文本处理）
 - **file_list**: 列出目录内容，了解有哪些文件
 - **file_read**: 读取文件内容（支持 max_lines 和 tail 参数控制范围）
 - **file_write**: 在 /workspace 下创建或修改文件
 - **find_path**: 搜索文件或目录
 - **host_exec**: 在 Windows 宿主机上执行命令
+
+### 专业分析工具（优先使用！比手动 grep 更准确）
+- **diagnose_convergence(job_dir, job_name)**: 调用 ConvergeDoctor 专业诊断收敛问题，自动解析 .msg/.sta 文件 + 匹配 200+ 已知错误模式，返回根因分析和修复建议
+- **analyze_mesh(inp_file)**: 调用 MeshAdvisor 分析网格质量，返回单元类型、节点数、质量评估和优化建议
+- **generate_inp(description, output_path, format, domain)**: 调用 InpGenerator 从自然语言生成 INP 文件或 Python 脚本
+- **analyze_output(job_dir, job_name, output_type)**: 解析输出文件，提取收敛历史、问题增量步等结构化结果
   - Abaqus 在宿主机: D:\\200_Scientific\\2060_SIMULIA\\002-Commands\\abaqus.bat
   - 宿主机路径示例: E:\\Desktop\\abaqus_agent\\...
   - **提交作业必须后台运行**: start /b abaqus job=<name> cpus=8（不加 start /b 会超时！）
@@ -1322,6 +1633,7 @@ async def agent_chat(request: AgentChatRequest):
 Docker 容器中路径 /workspace 对应宿主机的 E:\\Desktop\\abaqus_agent
 
 ## 行为准则
+- **优先用专业工具**：分析收敛用 diagnose_convergence，分析网格用 analyze_mesh，查看结果用 analyze_output。不要用 shell_exec 手动 grep 来做这些事
 - **不要猜测**：不知道的信息就用工具去查
 - **不要偷懒**：如果用户问文件内容，用 file_read 读了再回答，不要说"请自行查看"
 - **结果导向**：直接给出答案和建议，不要说"你可以尝试..."而是直接做
