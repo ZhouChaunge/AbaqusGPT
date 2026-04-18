@@ -1,0 +1,45 @@
+# GitHub Copilot Code Review Configuration
+# Docs: https://docs.github.com/en/copilot/using-github-copilot/code-review/using-copilot-code-review
+
+# Enable automatic review on all PRs
+reviews:
+  # Automatically request review when PR is opened or updated
+  auto_review: true
+  
+  # Review scope - which files to review
+  path_filters:
+    # Include these patterns
+    include:
+      - "**/*.py"
+      - "**/*.js"
+      - "**/*.ts"
+      - "**/*.tsx"
+      - "**/*.yml"
+      - "**/*.yaml"
+    # Exclude these patterns
+    exclude:
+      - "**/node_modules/**"
+      - "**/__pycache__/**"
+      - "**/dist/**"
+      - "**/*.min.js"
+      - "**/package-lock.json"
+      - "**/poetry.lock"
+
+# Review settings
+settings:
+  # Language for comments (en, zh-CN, etc.)
+  language: "zh-CN"
+  
+  # Focus areas
+  focus:
+    - security
+    - performance
+    - best_practices
+    - error_handling
+    - readability
+
+# Labels to skip review
+skip_labels:
+  - "skip-review"
+  - "no-copilot"
+  - "wip"
