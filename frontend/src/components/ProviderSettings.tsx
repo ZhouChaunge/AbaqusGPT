@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { X, Plus, Trash2, CheckCircle, XCircle, Loader2, Key } from 'lucide-react'
 
 interface ProviderKeyInfo {
@@ -115,11 +115,11 @@ export default function ProviderSettings({ isOpen, onClose, onKeysChanged }: Pro
 
   const groupOrder = ['international', 'chinese', 'local']
 
-  const grouped = groupOrder.map((g) => ({
+  const grouped = useMemo(() => groupOrder.map((g) => ({
     group: g,
     label: groupLabels[g],
     providers: catalog.filter((c) => c.group === g),
-  }))
+  })), [catalog])
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">

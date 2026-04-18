@@ -34,43 +34,42 @@ def _get_fernet():
     if _fernet is not None:
         return _fernet
     if Fernet is None:
-        return None
+        raise RuntimeError(
+            "Encryption support is unavailable: install 'cryptography' package."
+        )
     key = os.environ.get("ENCRYPTION_KEY", "")
     if not key:
-        # Auto-generate and warn — production should set this explicitly
-        key = Fernet.generate_key().decode()
-        os.environ["ENCRYPTION_KEY"] = key
+        raise RuntimeError(
+            "ENCRYPTION_KEY environment variable must be explicitly configured "
+            "for provider API key encryption. Generate one with: "
+            "python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'"
+        )
     try:
         _fernet = Fernet(key.encode() if isinstance(key, str) else key)
-    except Exception:
-        _fernet = None
+    except Exception as e:
+        raise RuntimeError(
+            f"Invalid ENCRYPTION_KEY configuration: {e}"
+        )
     return _fernet
 
 
 def _encrypt(value: str) -> str:
     """Encrypt a string value."""
     f = _get_fernet()
-    if f is None:
-        return value  # Fallback: no encryption
     return f.encrypt(value.encode()).decode()
 
 
 def _decrypt(value: str) -> str:
     """Decrypt a string value."""
     f = _get_fernet()
-    if f is None:
-        return value
-    try:
-        return f.decrypt(value.encode()).decode()
-    except Exception:
-        return value  # Return as-is if decryption fails
+    return f.decrypt(value.encode()).decode()
 
 
 def _mask_key(key: str) -> str:
     """Mask API key, showing only last 4 characters."""
-    if len(key) <= 8:
+    if len(key) <= 4:
         return "****"
-    return f"{key[:3]}****...{key[-4:]}"
+    return f"****...{key[-4:]}"
 
 
 async def get_redis() -> redis.Redis:
@@ -105,7 +104,7 @@ PROVIDER_CATALOG = {
         "group": "chinese",
         "models": ["glm-4", "glm-4v", "glm-3-turbo"],
         "key_prefix": "",
-        "env_var": "ZHIPU_API_KEY",
+        "env_var": "ZHIPUAI_API_KEY",
     },
     "dashscope": {
         "name": "通义千问 Qwen",
@@ -120,13 +119,6 @@ PROVIDER_CATALOG = {
         "models": ["deepseek-chat", "deepseek-coder"],
         "key_prefix": "sk-",
         "env_var": "DEEPSEEK_API_KEY",
-    },
-    "baidu": {
-        "name": "百度文心 ERNIE",
-        "group": "chinese",
-        "models": ["ernie-4.0", "ernie-3.5-turbo"],
-        "key_prefix": "",
-        "env_var": "BAIDU_API_KEY",
     },
     "moonshot": {
         "name": "月之暗面 Kimi",
@@ -315,10 +307,7 @@ async def add_key(req: ProviderKeyCreate):
     await r.set(f"{PROVIDER_PREFIX}{key_id}", json.dumps(record, ensure_ascii=False))
     await r.lpush(PROVIDER_LIST_KEY, key_id)
 
-    # Also set in environment so LiteLLM can use it immediately
     pinfo = PROVIDER_CATALOG[req.provider]
-    if pinfo.get("env_var"):
-        os.environ[pinfo["env_var"]] = req.api_key
 
     return ProviderKeyInfo(
         id=key_id,
@@ -380,29 +369,18 @@ async def test_key(key_id: str):
         from abaqusgpt.llm.client import MODEL_MAPPING
         litellm_model = MODEL_MAPPING.get(test_model, test_model)
 
-        # Set the key in env temporarily
-        env_var = pinfo.get("env_var", "")
-        old_val = os.environ.get(env_var, "")
-        if env_var:
-            os.environ[env_var] = decrypted_key
-
         try:
             start = time.monotonic()
             await litellm.acompletion(
                 model=litellm_model,
                 messages=[{"role": "user", "content": "hi"}],
                 max_tokens=5,
+                api_key=decrypted_key,
             )
             elapsed = int((time.monotonic() - start) * 1000)
             result = TestResult(status="ok", latency_ms=elapsed)
         except Exception as e:
             result = TestResult(status="error", message=str(e)[:200])
-        finally:
-            if env_var:
-                if old_val:
-                    os.environ[env_var] = old_val
-                else:
-                    os.environ.pop(env_var, None)
 
     # Save test result to Redis
     info["test_status"] = result.status

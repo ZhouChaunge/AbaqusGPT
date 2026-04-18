@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { ChevronDown } from 'lucide-react'
 
 interface ModelInfo {
@@ -29,8 +29,9 @@ export default function ModelSelector({ value, onChange, refreshTrigger = 0 }: M
       if (res.ok) {
         const data = await res.json()
         setModels(data.models)
-        // If current value not in available models, use active_model from server
-        if (data.active_model && !data.models.find((m: ModelInfo) => m.id === value)) {
+        // Initialize selection from the server's active model when available
+        const hasActiveModel = data.active_model && data.models.find((m: ModelInfo) => m.id === data.active_model)
+        if (hasActiveModel && data.active_model !== value) {
           onChange(data.active_model)
         }
       }
@@ -41,13 +42,13 @@ export default function ModelSelector({ value, onChange, refreshTrigger = 0 }: M
 
   const currentModel = models.find((m) => m.id === value)
 
-  // Group models by group
-  const grouped = models.reduce<Record<string, ModelInfo[]>>((acc, m) => {
+  // Group models by group (memoized)
+  const grouped = useMemo(() => models.reduce<Record<string, ModelInfo[]>>((acc, m) => {
     const key = m.group
     if (!acc[key]) acc[key] = []
     acc[key].push(m)
     return acc
-  }, {})
+  }, {}), [models])
 
   const groupLabels: Record<string, string> = {
     international: '🌍 国际模型',

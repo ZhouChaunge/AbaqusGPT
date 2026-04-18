@@ -3,7 +3,7 @@
 import json
 from typing import Optional, List
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 import redis.asyncio as redis
 
@@ -95,6 +95,13 @@ async def list_models():
 @router.put("/active")
 async def set_active_model(req: ActiveModelRequest):
     """Set the currently active model."""
+    # Validate model exists in configured providers
+    all_models = set()
+    for pinfo in PROVIDER_CATALOG.values():
+        for m in pinfo["models"]:
+            all_models.add(m)
+    if req.model not in all_models:
+        raise HTTPException(status_code=400, detail=f"Unknown model: {req.model}")
     r = await get_redis()
     await r.set(ACTIVE_MODEL_KEY, req.model)
     return {"model": req.model}
