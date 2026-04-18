@@ -105,8 +105,6 @@ export default function ProviderSettings({ isOpen, onClose, onKeysChanged }: Pro
     }
   }
 
-  if (!isOpen) return null
-
   const groupLabels: Record<string, string> = {
     international: '🌍 国际模型',
     chinese: '🇨🇳 国产模型',
@@ -120,6 +118,8 @@ export default function ProviderSettings({ isOpen, onClose, onKeysChanged }: Pro
     label: groupLabels[g],
     providers: catalog.filter((c) => c.group === g),
   })), [catalog])
+
+  if (!isOpen) return null
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">

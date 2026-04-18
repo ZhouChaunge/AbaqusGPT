@@ -37,6 +37,7 @@ class ModelInfo(BaseModel):
     provider: str
     provider_name: str
     group: str
+    configured: bool = True
 
 
 class ModelListResponse(BaseModel):
@@ -71,18 +72,19 @@ async def list_models():
     # Always include ollama (no key needed)
     configured_providers.add("ollama")
 
-    # Build model list from configured providers
+    # Build model list from ALL providers, marking configured status
     models: List[ModelInfo] = []
     for pid, pinfo in PROVIDER_CATALOG.items():
-        if pid in configured_providers:
-            for model_id in pinfo["models"]:
-                models.append(ModelInfo(
-                    id=model_id,
-                    name=model_id,
-                    provider=pid,
-                    provider_name=pinfo["name"],
-                    group=pinfo["group"],
-                ))
+        is_configured = pid in configured_providers
+        for model_id in pinfo["models"]:
+            models.append(ModelInfo(
+                id=model_id,
+                name=model_id,
+                provider=pid,
+                provider_name=pinfo["name"],
+                group=pinfo["group"],
+                configured=is_configured,
+            ))
 
     # Get active model
     active = await r.get(ACTIVE_MODEL_KEY)

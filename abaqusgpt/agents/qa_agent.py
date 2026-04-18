@@ -35,18 +35,20 @@ Respond in Chinese unless the user asks in English.
     def __init__(self, model: str = None):
         self.llm = get_llm_client(model=model)
     
-    def answer(self, question: str) -> str:
+    def answer(self, question: str, history: list = None) -> str:
         """
         Answer a question about Abaqus.
         
         Args:
             question: User's question
+            history: Conversation history as list of {role, content} dicts
             
         Returns:
             Answer as formatted string
         """
         response = self.llm.chat(
             question,
-            system_prompt=self.SYSTEM_PROMPT
+            system_prompt=self.SYSTEM_PROMPT,
+            history=history,
         )
         return response

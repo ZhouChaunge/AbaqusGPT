@@ -7,6 +7,7 @@ interface ModelInfo {
   provider: string
   provider_name: string
   group: string
+  configured: boolean
 }
 
 interface ModelSelectorProps {
@@ -95,13 +96,21 @@ export default function ModelSelector({ value, onChange, refreshTrigger = 0 }: M
                 {groupModels.map((m) => (
                   <button
                     key={m.id}
-                    onClick={() => handleSelect(m.id)}
-                    className={`w-full text-left px-3 py-2 text-sm hover:bg-dark-700 transition-colors flex items-center justify-between ${
-                      m.id === value ? 'text-primary-400 bg-dark-700/50' : 'text-dark-200'
+                    onClick={() => m.configured && handleSelect(m.id)}
+                    disabled={!m.configured}
+                    className={`w-full text-left px-3 py-2 text-sm transition-colors flex items-center justify-between ${
+                      !m.configured
+                        ? 'text-dark-500 cursor-not-allowed'
+                        : m.id === value
+                          ? 'text-primary-400 bg-dark-700/50 hover:bg-dark-700'
+                          : 'text-dark-200 hover:bg-dark-700'
                     }`}
+                    title={!m.configured ? '请先配置 API Key' : undefined}
                   >
                     <span>{m.name}</span>
-                    <span className="text-xs text-dark-500">{m.provider_name}</span>
+                    <span className="text-xs text-dark-500">
+                      {m.configured ? m.provider_name : '🔒 未配置'}
+                    </span>
                   </button>
                 ))}
               </div>

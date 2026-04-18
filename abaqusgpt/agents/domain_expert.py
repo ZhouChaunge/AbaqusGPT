@@ -150,14 +150,8 @@ class DomainExpert:
         if domain_knowledge:
             context = f"\n\n相关知识库内容：\n{domain_knowledge}\n\n"
         
-        # Build conversation
-        messages = []
-        if history:
-            for msg in history[-6:]:  # Keep last 6 messages for context
-                messages.append({
-                    "role": msg.get("role", "user"),
-                    "content": msg.get("content", "")
-                })
+        # Limit history to last 6 messages
+        limited_history = history[-6:] if history else None
         
         # Add current question
         full_question = f"{context}用户问题：{question}" if context else question
@@ -165,6 +159,7 @@ class DomainExpert:
         response = self.llm.chat(
             full_question,
             system_prompt=self.system_prompt,
+            history=limited_history,
         )
         
         return response

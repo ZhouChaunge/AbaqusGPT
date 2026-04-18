@@ -81,7 +81,7 @@ async def chat(request: ChatRequest):
             response = expert.answer(request.message, history=request.history)
         else:
             agent = QAAgent(model=model)
-            response = agent.answer(request.message)
+            response = agent.answer(request.message, history=request.history)
         
         return ChatResponse(
             response=response,
@@ -110,7 +110,7 @@ async def chat_stream(request: ChatRequest):
                 response = expert.answer(request.message, history=request.history)
             else:
                 agent = QAAgent(model=model)
-                response = agent.answer(request.message)
+                response = agent.answer(request.message, history=request.history)
             
             # Simulate streaming by yielding chunks
             chunk_size = 20
