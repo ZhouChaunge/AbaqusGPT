@@ -1,0 +1,68 @@
+# CodeRabbit Configuration
+# Docs: https://docs.coderabbit.ai/configuration
+
+# Language for review comments
+language: "zh-CN"
+
+# Tone of the review
+tone_instructions: "友好且专业，给出具体的改进建议"
+
+# Early access features
+early_access: true
+
+# Review settings
+reviews:
+  # Automatic review on PR creation/update
+  auto_review:
+    enabled: true
+    # Ignore certain file patterns
+    ignore_title_keywords:
+      - "WIP"
+      - "DO NOT MERGE"
+    # Drafts are not auto-reviewed
+    drafts: false
+  
+  # High-level summary
+  high_level_summary: true
+  high_level_summary_placeholder: "@coderabbitai summary"
+  
+  # Review status in PR description
+  review_status: true
+  
+  # Poem in the review (fun feature)
+  poem: false
+  
+  # Collapse walkthrough
+  collapse_walkthrough: false
+  
+  # Path filters - which files to review
+  path_filters:
+    - "!**/*.lock"
+    - "!**/package-lock.json"
+    - "!**/poetry.lock"
+    - "!**/*.min.js"
+    - "!**/*.min.css"
+    - "!**/node_modules/**"
+    - "!**/__pycache__/**"
+    - "!**/dist/**"
+    - "!**/build/**"
+  
+  # Path instructions - specific guidance for certain paths
+  path_instructions:
+    - path: "**/*.py"
+      instructions: "检查 Python 代码的类型提示、docstring、错误处理和 PEP 8 规范"
+    - path: "**/*.ts"
+      instructions: "检查 TypeScript 的类型安全和最佳实践"
+    - path: "**/*.tsx"
+      instructions: "检查 React 组件的 hooks 使用和性能优化"
+
+# Chat settings
+chat:
+  # Allow chat commands in PR comments
+  auto_reply: true
+
+# Knowledge base (experimental)
+knowledge_base:
+  opt_out: false
+  learnings:
+    scope: "auto"
