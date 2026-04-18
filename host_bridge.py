@@ -20,17 +20,17 @@ from pathlib import Path
 
 # ── 依赖检查 ──────────────────────────────────────────────────────────────────
 try:
+    import uvicorn
     from fastapi import FastAPI, HTTPException
     from fastapi.middleware.cors import CORSMiddleware
     from pydantic import BaseModel
-    import uvicorn
 except ImportError:
     print("缺少依赖，正在安装...")
     subprocess.run([sys.executable, "-m", "pip", "install", "fastapi", "uvicorn[standard]", "pydantic"], check=True)
+    import uvicorn
     from fastapi import FastAPI, HTTPException
     from fastapi.middleware.cors import CORSMiddleware
     from pydantic import BaseModel
-    import uvicorn
 
 # ── 安全黑名单（Windows 命令）────────────────────────────────────────────────
 _BLOCKED_PATTERNS = [
@@ -119,7 +119,7 @@ def execute(req: ExecRequest):
             actual_cmd = cmd[len("start /b "):].strip()
             proc = subprocess.Popen(
                 actual_cmd,
-                shell=True,
+                shell=True,  # nosec B602
                 cwd=cwd,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
@@ -139,7 +139,7 @@ def execute(req: ExecRequest):
     try:
         result = subprocess.run(
             cmd,
-            shell=True,
+            shell=True,  # nosec B602 — host bridge requires shell for Abaqus commands
             cwd=cwd,
             capture_output=True,
             text=True,

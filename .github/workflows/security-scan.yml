@@ -1,0 +1,48 @@
+# 安全扫描 — 验证"代码有没有安全风险"
+# AbaqusGPT 特有需求：有 subprocess.run(shell=True)、文件操作、Redis、加密密钥
+name: Security Scan
+
+on:
+  pull_request:
+    paths:
+      - "**/*.py"
+      - "requirements.txt"
+      - "pyproject.toml"
+      - ".github/workflows/security-scan.yml"
+  push:
+    branches: [master]
+    paths:
+      - "**/*.py"
+      - "requirements.txt"
+      - "pyproject.toml"
+      - ".github/workflows/security-scan.yml"
+
+jobs:
+  security:
+    name: Security
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install scan tools
+        run: pip install bandit pip-audit
+
+      # 报告所有 medium+ 发现（信息性，不阻塞）
+      - name: Bandit report (medium+)
+        run: bandit -r abaqusgpt/ server/ host_bridge.py -ll -ii -f txt || true
+
+      # 仅 HIGH severity + HIGH confidence 才阻塞 CI
+      - name: Bandit gate (high severity)
+        run: bandit -r abaqusgpt/ server/ host_bridge.py -lll -iii
+
+      # 依赖漏洞审计（信息性，逐步收紧）
+      - name: Install project dependencies
+        run: pip install -r requirements.txt
+
+      - name: Dependency vulnerability audit
+        continue-on-error: true
+        run: pip-audit

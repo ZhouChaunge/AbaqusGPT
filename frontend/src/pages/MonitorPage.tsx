@@ -320,7 +320,7 @@ function AgentSteps({ steps }: { steps: AgentStep[] }) {
         // === Merged tool_call + tool_result: terminal-style command block ===
         if (g.kind === 'command') {
           const isExpanded = expandedIdx.has(g.idx)
-          const fullOut = (g.result as any).full_output
+          const fullOut = g.result.full_output
           return (
             <div key={gi} className="rounded-lg border border-[#30363d] bg-[#0d1117] overflow-hidden text-xs">
               <div className="flex items-center gap-2 px-3 py-1 bg-[#161b22] border-b border-[#21262d]">
@@ -397,7 +397,7 @@ function AgentSteps({ steps }: { steps: AgentStep[] }) {
         // Standalone tool_result
         if (key === 'tool_result') {
           const isExpanded = expandedIdx.has(idx)
-          const fullOut = (step as any).full_output
+          const fullOut = step.full_output
           return (
             <div key={gi} className="rounded-lg border border-[#30363d] bg-[#0d1117] overflow-hidden text-xs">
               <div className={`px-3 py-1.5 flex items-center gap-2 ${fullOut ? 'cursor-pointer hover:bg-[#161b22]' : ''}`}
@@ -680,12 +680,12 @@ export default function MonitorPage() {
     try {
       const response = await fetch(`/api/v1/workspace/status?path=${encodeURIComponent(workspacePath)}`)
       if (response.ok) { const data = await response.json(); setWorkspaceStatus(data) }
-    } catch {}
+    } catch { /* ignore refresh errors */ }
     // Also refresh tree silently
     try {
       const treeResp = await fetch(`/api/v1/workspace/tree?path=${encodeURIComponent(workspacePath)}`)
       if (treeResp.ok) { const td = await treeResp.json(); setFileTree(td.tree || []) }
-    } catch {}
+    } catch { /* ignore refresh errors */ }
   }, [workspacePath])
 
   useEffect(() => {
@@ -882,7 +882,7 @@ export default function MonitorPage() {
     try {
       const response = await fetch(`/api/v1/workspace/file/${encodeURIComponent(activeTabName)}?workspace=${encodeURIComponent(workspacePath)}&tail=0`)
       if (response.ok) { const data = await response.json(); setOpenTabs(prev => { const n = new Map(prev); n.set(activeTabName, { ...tab, content: data.content || '', isLoading: false, isTruncated: data?.truncated ?? false }); return n }) }
-    } catch {}
+    } catch { /* ignore file read errors */ }
   }
 
   // Chat
@@ -916,7 +916,7 @@ export default function MonitorPage() {
       const decoder = new TextDecoder()
       if (reader) {
         let buffer = ''
-        while (true) {
+        for (;;) {
           const { done, value } = await reader.read()
           if (done) break
           buffer += decoder.decode(value, { stream: true })

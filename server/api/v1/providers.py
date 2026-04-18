@@ -1,14 +1,14 @@
 """LLM Provider & API Key management with encrypted Redis storage."""
 
 import json
-import uuid
 import os
+import uuid
 from datetime import datetime, timezone
-from typing import Optional, List
+from typing import List, Optional
 
+import redis.asyncio as redis
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
-import redis.asyncio as redis
 
 from ...core.config import settings
 
@@ -373,8 +373,9 @@ async def test_key(key_id: str):
             result = TestResult(status="error", message=str(e))
     else:
         # Use LiteLLM for a minimal completion test
-        import litellm
         import time
+
+        import litellm
 
         models = pinfo.get("models", [])
         test_model = models[0] if models else provider

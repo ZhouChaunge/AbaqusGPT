@@ -1,5 +1,5 @@
 """LLM client interfaces for AbaqusGPT."""
 
-from .client import get_llm_client, LLMClient
+from .client import LLMClient, get_llm_client
 
 __all__ = ["get_llm_client", "LLMClient"]

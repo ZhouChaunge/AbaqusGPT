@@ -2,7 +2,6 @@
 
 from typing import Optional
 
-
 # Domain knowledge templates (will be expanded with RAG)
 DOMAIN_KNOWLEDGE = {
     "geotechnical": {
@@ -28,7 +27,7 @@ ALL, GRAV, 9.81, 0., -1., 0.
 - K0 = sigma_h / sigma_v (静止土压力系数)
 - 使用 *GEOSTATIC 步骤可自动平衡
 """,
-        
+
         "本构模型": """常用岩土本构模型：
 
 1. **Mohr-Coulomb**
@@ -56,7 +55,7 @@ ALL, GRAV, 9.81, 0., -1., 0.
 适用于正常固结或轻微超固结粘土
 """,
     },
-    
+
     "structural": {
         "混凝土CDP": """混凝土损伤塑性模型 (CDP) 设置：
 
@@ -89,7 +88,7 @@ ALL, GRAV, 9.81, 0., -1., 0.
 - fb0/fc0: 双轴/单轴强度比, 默认 1.16
 - K: 默认 0.667
 """,
-        
+
         "钢筋建模": """Abaqus 钢筋建模方法：
 
 1. **嵌入式钢筋 (*EMBEDDED ELEMENT)**
@@ -113,7 +112,7 @@ REBAR_NAME, A_rebar, spacing, position, STEEL, orient_angle
 ```
 """,
     },
-    
+
     "mechanical": {
         "接触分析": """Abaqus 接触分析设置：
 
@@ -144,7 +143,7 @@ slave_surface, master_surface
 - 不收敛: 减小增量步，启用稳定化
 - 主从面选择: 粗网格为主面
 """,
-        
+
         "螺栓预紧力": """Abaqus 螺栓预紧力设置：
 
 ```
@@ -164,7 +163,7 @@ pretension_node, 1, 1, -0.1  (预紧位移)
 ```
 """,
     },
-    
+
     "thermal": {
         "热边界条件": """Abaqus 热边界条件设置：
 
@@ -194,7 +193,7 @@ surface_name, S, flux_value
 element_set, BF, heat_generation_rate
 ```
 """,
-        
+
         "焊接热源": """Goldak 双椭球热源模型实现：
 
 需要使用 DFLUX 用户子程序：
@@ -209,7 +208,7 @@ END SUBROUTINE
 或使用 ABAQUS Welding Interface (AWI)
 """,
     },
-    
+
     "impact": {
         "Explicit设置": """Abaqus/Explicit 分析设置：
 
@@ -241,7 +240,7 @@ END SUBROUTINE
 *OUTPUT, HISTORY, TIME INTERVAL=1e-6
 ```
 """,
-        
+
         "JohnsonCook": """Johnson-Cook 材料模型：
 
 ```
@@ -268,7 +267,7 @@ fracture_energy
 - m = 1.03 (热软化指数)
 """,
     },
-    
+
     "composite": {
         "层合板建模": """复合材料层合板建模：
 
@@ -302,27 +301,27 @@ Xt, Xc, Yt, Yc, Sl, St
 def get_domain_knowledge(domain: str, query: str) -> Optional[str]:
     """
     Retrieve relevant domain knowledge for a query.
-    
+
     Args:
         domain: Engineering domain
         query: User's query
-        
+
     Returns:
         Relevant knowledge text or None
     """
     if domain not in DOMAIN_KNOWLEDGE:
         return None
-    
+
     domain_data = DOMAIN_KNOWLEDGE[domain]
-    
+
     # Simple keyword matching (will be replaced with RAG)
     query_lower = query.lower()
-    
+
     for topic, content in domain_data.items():
         if topic.lower() in query_lower or any(
-            keyword in query_lower 
+            keyword in query_lower
             for keyword in topic.lower().split()
         ):
             return content
-    
+
     return None

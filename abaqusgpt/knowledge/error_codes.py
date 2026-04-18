@@ -23,7 +23,7 @@ ERROR_DATABASE = {
         ],
         "reference": "Abaqus Analysis User's Guide 7.2.1"
     },
-    
+
     "NEGATIVE EIGENVALUE": {
         "category": "stability",
         "severity": "warning",
@@ -41,7 +41,7 @@ ERROR_DATABASE = {
         ],
         "reference": "Abaqus Analysis User's Guide 6.2.4"
     },
-    
+
     "EXCESSIVE DISTORTION": {
         "category": "element",
         "severity": "critical",
@@ -60,7 +60,7 @@ ERROR_DATABASE = {
         ],
         "reference": "Abaqus Analysis User's Guide 10.2.1"
     },
-    
+
     "ZERO PIVOT": {
         "category": "singularity",
         "severity": "critical",
@@ -78,7 +78,7 @@ ERROR_DATABASE = {
         ],
         "reference": "Abaqus Analysis User's Guide 7.1.1"
     },
-    
+
     "CONTACT OVERCLOSURE": {
         "category": "contact",
         "severity": "warning",
@@ -96,7 +96,7 @@ ERROR_DATABASE = {
         ],
         "reference": "Abaqus Analysis User's Guide 35.1.1"
     },
-    
+
     "SEVERE DISCONTINUITY ITERATION": {
         "category": "contact",
         "severity": "warning",
@@ -113,7 +113,7 @@ ERROR_DATABASE = {
         ],
         "reference": "Abaqus Analysis User's Guide 35.1.2"
     },
-    
+
     "ELEMENT HAS NEGATIVE JACOBIAN": {
         "category": "element",
         "severity": "critical",
@@ -130,7 +130,7 @@ ERROR_DATABASE = {
         ],
         "reference": "Abaqus Analysis User's Guide 26.1.1"
     },
-    
+
     "PLASTICITY ALGORITHM DID NOT CONVERGE": {
         "category": "material",
         "severity": "critical",
@@ -147,7 +147,7 @@ ERROR_DATABASE = {
         ],
         "reference": "Abaqus Analysis User's Guide 22.2.1"
     },
-    
+
     "TIME INCREMENT REQUIRED IS LESS THAN THE MINIMUM": {
         "category": "convergence",
         "severity": "critical",
@@ -164,7 +164,7 @@ ERROR_DATABASE = {
         ],
         "reference": "Abaqus Analysis User's Guide 7.2.1"
     },
-    
+
     "HYPERELASTIC MATERIAL HAS BECOME UNSTABLE": {
         "category": "material",
         "severity": "critical",
@@ -181,11 +181,11 @@ ERROR_DATABASE = {
         ],
         "reference": "Abaqus Analysis User's Guide 22.5.1"
     },
-    
+
     # =========================================================================
     # Additional Contact Errors | 补充接触错误
     # =========================================================================
-    
+
     "CONTACT CONSTRAINT OVERCONSTRAINTS": {
         "category": "contact",
         "severity": "warning",
@@ -202,7 +202,7 @@ ERROR_DATABASE = {
         ],
         "reference": "Abaqus Analysis User's Guide 35.1.1"
     },
-    
+
     "SLAVE NODE IS INITIALLY IN CONTACT": {
         "category": "contact",
         "severity": "warning",
@@ -218,7 +218,7 @@ ERROR_DATABASE = {
         ],
         "reference": "Abaqus Analysis User's Guide 35.3.1"
     },
-    
+
     "EXCESSIVE CONTACT ADJUSTMENT REQUIRED": {
         "category": "contact",
         "severity": "warning",
@@ -234,7 +234,7 @@ ERROR_DATABASE = {
         ],
         "reference": "Abaqus Analysis User's Guide 35.3.4"
     },
-    
+
     "CONTACT SURFACE TRACKING LOST": {
         "category": "contact",
         "severity": "critical",
@@ -251,11 +251,11 @@ ERROR_DATABASE = {
         ],
         "reference": "Abaqus Analysis User's Guide 35.2.1"
     },
-    
+
     # =========================================================================
     # Additional Material Errors | 补充材料错误
     # =========================================================================
-    
+
     "NEGATIVE EIGENVALUE IN MATERIAL STIFFNESS": {
         "category": "material",
         "severity": "critical",
@@ -272,7 +272,7 @@ ERROR_DATABASE = {
         ],
         "reference": "Abaqus Analysis User's Guide 22.1.1"
     },
-    
+
     "CREEP STRAIN RATE IS TOO LARGE": {
         "category": "material",
         "severity": "warning",
@@ -288,7 +288,7 @@ ERROR_DATABASE = {
         ],
         "reference": "Abaqus Analysis User's Guide 22.2.4"
     },
-    
+
     "DAMAGE HAS EXCEEDED THE MAXIMUM ALLOWED": {
         "category": "material",
         "severity": "critical",
@@ -305,7 +305,7 @@ ERROR_DATABASE = {
         ],
         "reference": "Abaqus Analysis User's Guide 24.1.1"
     },
-    
+
     "VISCOELASTIC MATERIAL MODEL ERROR": {
         "category": "material",
         "severity": "critical",
@@ -321,11 +321,11 @@ ERROR_DATABASE = {
         ],
         "reference": "Abaqus Analysis User's Guide 22.7.1"
     },
-    
+
     # =========================================================================
     # Boundary Condition Errors | 边界条件错误
     # =========================================================================
-    
+
     "PRESCRIBED MOTION IS INCOMPATIBLE": {
         "category": "boundary",
         "severity": "critical",
@@ -341,7 +341,7 @@ ERROR_DATABASE = {
         ],
         "reference": "Abaqus Analysis User's Guide 34.3.1"
     },
-    
+
     "BOUNDARY CONDITION AND LOAD AT SAME DOF": {
         "category": "boundary",
         "severity": "warning",
@@ -355,7 +355,7 @@ ERROR_DATABASE = {
         ],
         "reference": "Abaqus Analysis User's Guide 34.3.2"
     },
-    
+
     "MPC INCONSISTENT WITH BOUNDARY CONDITIONS": {
         "category": "boundary",
         "severity": "critical",
@@ -371,7 +371,7 @@ ERROR_DATABASE = {
         ],
         "reference": "Abaqus Analysis User's Guide 34.2.2"
     },
-    
+
     "APPLIED LOAD EXCEEDS REASONABLE RANGE": {
         "category": "boundary",
         "severity": "warning",
@@ -387,11 +387,11 @@ ERROR_DATABASE = {
         ],
         "reference": "Abaqus Analysis User's Guide 34.4.1"
     },
-    
+
     # =========================================================================
     # Solver Errors | 求解器错误
     # =========================================================================
-    
+
     "LINEAR SOLVER FAILED": {
         "category": "solver",
         "severity": "critical",
@@ -408,7 +408,7 @@ ERROR_DATABASE = {
         ],
         "reference": "Abaqus Analysis User's Guide 6.1.1"
     },
-    
+
     "ITERATIVE SOLVER DID NOT CONVERGE": {
         "category": "solver",
         "severity": "critical",
@@ -425,7 +425,7 @@ ERROR_DATABASE = {
         ],
         "reference": "Abaqus Analysis User's Guide 6.1.3"
     },
-    
+
     "INSUFFICIENT MEMORY FOR SOLVER": {
         "category": "solver",
         "severity": "critical",
@@ -442,7 +442,7 @@ ERROR_DATABASE = {
         ],
         "reference": "Abaqus Analysis User's Guide 3.4.1"
     },
-    
+
     "CUTBACK TOO SEVERE": {
         "category": "solver",
         "severity": "warning",
@@ -459,11 +459,11 @@ ERROR_DATABASE = {
         ],
         "reference": "Abaqus Analysis User's Guide 7.2.3"
     },
-    
+
     # =========================================================================
     # Output and Post-processing Errors | 输出和后处理错误
     # =========================================================================
-    
+
     "OUTPUT REQUEST INVALID": {
         "category": "output",
         "severity": "warning",
@@ -479,7 +479,7 @@ ERROR_DATABASE = {
         ],
         "reference": "Abaqus Analysis User's Guide 4.1.1"
     },
-    
+
     "ODB FILE SIZE LIMIT EXCEEDED": {
         "category": "output",
         "severity": "warning",
@@ -502,32 +502,32 @@ ERROR_DATABASE = {
 def get_error_info(error_text: str) -> Optional[dict]:
     """
     Look up error information from the database.
-    
+
     Args:
         error_text: Error message text
-        
+
     Returns:
         Error information dictionary or None if not found
     """
     error_upper = error_text.upper()
-    
+
     for pattern, info in ERROR_DATABASE.items():
         if pattern in error_upper:
             return {
                 "pattern": pattern,
                 **info
             }
-    
+
     return None
 
 
 def get_errors_by_category(category: str) -> list[dict]:
     """
     Get all errors of a specific category.
-    
+
     Args:
         category: Error category (convergence, contact, element, material, stability, singularity)
-        
+
     Returns:
         List of error information dictionaries
     """

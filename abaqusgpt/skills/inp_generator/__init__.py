@@ -8,10 +8,9 @@ Generate Abaqus .inp files from natural language or templates.
 
 from pathlib import Path
 from typing import Any, Dict, Optional
-import re
 
-from ..base import Skill, SkillMetadata
 from ...llm.client import get_llm_client
+from ..base import Skill, SkillMetadata
 
 
 class InpGeneratorSkill(Skill):
@@ -19,7 +18,7 @@ class InpGeneratorSkill(Skill):
     Skill for generating Abaqus input files.
     生成 Abaqus 输入文件的技能。
     """
-    
+
     # Built-in templates | 内置模板
     TEMPLATES = {
         "cantilever": {
@@ -38,16 +37,16 @@ class InpGeneratorSkill(Skill):
             "description": "Generic 3D contact problem setup",
         },
     }
-    
+
     def __init__(self, metadata: Optional[SkillMetadata] = None):
         super().__init__(metadata)
         self.llm = get_llm_client()
-    
+
     def execute(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """
         Execute INP generation.
         执行 INP 生成。
-        
+
         Args:
             context: Generation parameters
                 - description: Natural language description
@@ -55,7 +54,7 @@ class InpGeneratorSkill(Skill):
                 - parameters: Template parameters
                 - format: "inp" or "python"
                 - output_path: Optional output file path
-        
+
         Returns:
             Generated content and metadata
         """
@@ -63,11 +62,11 @@ class InpGeneratorSkill(Skill):
         template_name = context.get("template")
         output_format = context.get("format", "inp")
         output_path = context.get("output_path")
-        
+
         # Generate content
         if template_name:
             content = self._generate_from_template(
-                template_name, 
+                template_name,
                 context.get("parameters", {})
             )
         elif description:
@@ -80,14 +79,14 @@ class InpGeneratorSkill(Skill):
                 "status": "error",
                 "message": "Either 'description' or 'template' is required",
             }
-        
+
         # Validate generated content
         validation = self._validate_inp(content) if output_format == "inp" else {}
-        
+
         # Write to file if path provided
         if output_path and validation.get("syntax_ok", True):
             Path(output_path).write_text(content, encoding="utf-8")
-        
+
         return {
             "status": "success",
             "format": output_format,
@@ -95,7 +94,7 @@ class InpGeneratorSkill(Skill):
             "output_path": output_path,
             "validation": validation,
         }
-    
+
     def _generate_inp(self, description: str) -> str:
         """Generate Abaqus .inp file content."""
         prompt = f"""You are an expert Abaqus analyst. Generate a complete Abaqus input (.inp) file based on the following description.
@@ -111,7 +110,7 @@ Requirements:
 Output ONLY the .inp file content, no explanations.
 """
         return self.llm.chat(prompt)
-    
+
     def _generate_python(self, description: str) -> str:
         """Generate Abaqus Python script."""
         prompt = f"""You are an expert Abaqus analyst. Generate a complete Abaqus Python script based on the following description.
@@ -127,14 +126,14 @@ Requirements:
 Output ONLY the Python script content, no explanations.
 """
         return self.llm.chat(prompt)
-    
+
     def _generate_from_template(self, template_name: str, parameters: dict) -> str:
         """Generate from a predefined template."""
         template = self.TEMPLATES.get(template_name)
-        
+
         if not template:
             return f"** ERROR: Unknown template: {template_name}"
-        
+
         # For now, use LLM to fill template
         prompt = f"""Generate an Abaqus .inp file for: {template['name']}
 Description: {template['description']}
@@ -145,7 +144,7 @@ Parameters:
 Include all standard sections with proper Abaqus syntax.
 """
         return self.llm.chat(prompt)
-    
+
     def _validate_inp(self, content: str) -> dict:
         """Validate .inp file syntax."""
         validation = {
@@ -153,27 +152,27 @@ Include all standard sections with proper Abaqus syntax.
             "warnings": [],
             "errors": [],
         }
-        
+
         lines = content.split("\n")
-        
+
         # Check for required sections
         required_keywords = ["*HEADING", "*NODE", "*ELEMENT", "*END STEP"]
         found_keywords = set()
-        
+
         for line in lines:
             line_upper = line.strip().upper()
             for kw in required_keywords:
                 if line_upper.startswith(kw):
                     found_keywords.add(kw)
-        
+
         missing = set(required_keywords) - found_keywords
         if missing:
             validation["warnings"].append(f"Missing sections: {missing}")
-        
+
         # Check for common syntax issues
         for i, line in enumerate(lines, 1):
             stripped = line.strip()
-            
+
             # Check keyword format
             if stripped.startswith("*") and not stripped.startswith("**"):
                 # Keywords should be uppercase (warning only)
@@ -182,9 +181,9 @@ Include all standard sections with proper Abaqus syntax.
                     validation["warnings"].append(
                         f"Line {i}: Keyword should be uppercase: {keyword}"
                     )
-        
+
         return validation
-    
+
     def list_templates(self) -> Dict[str, dict]:
         """List available templates."""
         return self.TEMPLATES

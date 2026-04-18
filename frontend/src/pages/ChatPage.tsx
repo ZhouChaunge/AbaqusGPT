@@ -199,7 +199,7 @@ export default function ChatPage() {
       setMessages((prev) => [...prev, assistantMessage])
 
       if (reader) {
-        while (true) {
+        for (;;) {
           const { done, value } = await reader.read()
           if (done) break
 

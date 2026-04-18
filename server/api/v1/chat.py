@@ -1,15 +1,16 @@
 """Chat API endpoints with streaming support."""
 
 import asyncio
-from typing import Optional, List, Literal
+import json
+from typing import List, Literal, Optional
+
+import redis.asyncio as aioredis
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
-import json
-import redis.asyncio as aioredis
 
-from abaqusgpt.agents.qa_agent import QAAgent
 from abaqusgpt.agents.domain_expert import DomainExpert
+from abaqusgpt.agents.qa_agent import QAAgent
 
 router = APIRouter()
 
@@ -39,7 +40,7 @@ class ChatRequest(BaseModel):
     domain: Optional[str] = Field(None, description="Engineering domain")
     model: Optional[str] = Field(None, description="LLM model to use")
     history: List[Message] = Field(default_factory=list, description="Conversation history")
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -61,7 +62,7 @@ class ChatResponse(BaseModel):
 async def chat(request: ChatRequest):
     """
     Chat with AbaqusGPT.
-    
+
     Optionally specify a domain for specialized responses:
     - geotechnical: 岩土工程
     - structural: 结构工程
@@ -82,7 +83,7 @@ async def chat(request: ChatRequest):
         else:
             agent = QAAgent(model=model)
             response = agent.answer(request.message, history=request.history)
-        
+
         return ChatResponse(
             response=response,
             domain=request.domain,
@@ -96,7 +97,7 @@ async def chat(request: ChatRequest):
 async def chat_stream(request: ChatRequest):
     """
     Chat with streaming response.
-    
+
     Returns Server-Sent Events (SSE) stream.
     """
     async def generate():
@@ -111,19 +112,19 @@ async def chat_stream(request: ChatRequest):
             else:
                 agent = QAAgent(model=model)
                 response = agent.answer(request.message, history=request.history)
-            
+
             # Simulate streaming by yielding chunks
             chunk_size = 20
             for i in range(0, len(response), chunk_size):
                 chunk = response[i:i + chunk_size]
                 yield f"data: {json.dumps({'content': chunk})}\n\n"
                 await asyncio.sleep(0.02)  # Small delay for effect
-            
+
             yield f"data: {json.dumps({'done': True})}\n\n"
-            
+
         except Exception as e:
             yield f"data: {json.dumps({'error': str(e)})}\n\n"
-    
+
     return StreamingResponse(
         generate(),
         media_type="text/event-stream",

@@ -17,11 +17,11 @@ Each skill is a self-contained module with:
 """
 
 from .base import Skill, SkillMetadata, SkillRegistry
-from .loader import load_skill, discover_skills
+from .loader import discover_skills, load_skill
 
 __all__ = [
     "Skill",
-    "SkillMetadata", 
+    "SkillMetadata",
     "SkillRegistry",
     "load_skill",
     "discover_skills",

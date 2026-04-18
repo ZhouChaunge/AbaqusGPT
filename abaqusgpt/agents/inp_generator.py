@@ -5,18 +5,18 @@ from ..llm.client import get_llm_client
 
 class InpGenerator:
     """Agent for generating Abaqus inp files or Python scripts."""
-    
+
     def __init__(self, model: str = None):
         self.llm = get_llm_client(model=model)
-    
+
     def generate(self, description: str, format: str = "inp") -> str:
         """
         Generate Abaqus input file or Python script from description.
-        
+
         Args:
             description: Natural language description of the model
             format: Output format ('inp' or 'python')
-            
+
         Returns:
             Generated code as string
         """
@@ -26,7 +26,7 @@ class InpGenerator:
             return self._generate_python(description)
         else:
             raise ValueError(f"Unsupported format: {format}")
-    
+
     def _generate_inp(self, description: str) -> str:
         """Generate Abaqus .inp file content."""
         prompt = f"""You are an expert Abaqus analyst. Generate a complete Abaqus input (.inp) file based on the following description.
@@ -42,7 +42,7 @@ Requirements:
 Output ONLY the .inp file content, no explanations.
 """
         return self.llm.chat(prompt)
-    
+
     def _generate_python(self, description: str) -> str:
         """Generate Abaqus Python script."""
         prompt = f"""You are an expert Abaqus analyst. Generate a complete Abaqus Python script based on the following description.

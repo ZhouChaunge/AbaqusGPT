@@ -23,7 +23,7 @@ ELEMENT_LIBRARY = {
         ],
         "alternatives": ["C3D8R", "C3D8I", "C3D20R"]
     },
-    
+
     "C3D8R": {
         "name": "8-node linear brick (reduced integration)",
         "name_cn": "8节点线性六面体（减缩积分）",
@@ -44,7 +44,7 @@ ELEMENT_LIBRARY = {
         ],
         "alternatives": ["C3D8", "C3D8I", "C3D20R"]
     },
-    
+
     "C3D8I": {
         "name": "8-node linear brick (incompatible modes)",
         "name_cn": "8节点线性六面体（非协调模式）",
@@ -64,7 +64,7 @@ ELEMENT_LIBRARY = {
         ],
         "alternatives": ["C3D8R", "C3D20R"]
     },
-    
+
     # 3D Solid Elements - Quadratic
     "C3D20": {
         "name": "20-node quadratic brick (full integration)",
@@ -85,7 +85,7 @@ ELEMENT_LIBRARY = {
         ],
         "alternatives": ["C3D20R", "C3D10"]
     },
-    
+
     "C3D20R": {
         "name": "20-node quadratic brick (reduced integration)",
         "name_cn": "20节点二次六面体（减缩积分）",
@@ -105,7 +105,7 @@ ELEMENT_LIBRARY = {
         ],
         "alternatives": ["C3D10M", "C3D8R"]
     },
-    
+
     "C3D10": {
         "name": "10-node quadratic tetrahedron",
         "name_cn": "10节点二次四面体",
@@ -124,7 +124,7 @@ ELEMENT_LIBRARY = {
         ],
         "alternatives": ["C3D10M", "C3D4"]
     },
-    
+
     "C3D10M": {
         "name": "10-node modified quadratic tetrahedron",
         "name_cn": "10节点改进二次四面体",
@@ -143,7 +143,7 @@ ELEMENT_LIBRARY = {
         ],
         "alternatives": ["C3D10", "C3D4"]
     },
-    
+
     "C3D4": {
         "name": "4-node linear tetrahedron",
         "name_cn": "4节点线性四面体",
@@ -163,7 +163,7 @@ ELEMENT_LIBRARY = {
         ],
         "alternatives": ["C3D10", "C3D10M"]
     },
-    
+
     # Shell Elements
     "S4": {
         "name": "4-node shell (full integration)",
@@ -183,7 +183,7 @@ ELEMENT_LIBRARY = {
         ],
         "alternatives": ["S4R", "S8R"]
     },
-    
+
     "S4R": {
         "name": "4-node shell (reduced integration)",
         "name_cn": "4节点壳（减缩积分）",
@@ -202,7 +202,7 @@ ELEMENT_LIBRARY = {
         ],
         "alternatives": ["S4", "S8R"]
     },
-    
+
     "S3": {
         "name": "3-node triangular shell",
         "name_cn": "3节点三角形壳",
@@ -221,7 +221,7 @@ ELEMENT_LIBRARY = {
         ],
         "alternatives": ["S4R", "STRI65"]
     },
-    
+
     # Beam Elements
     "B31": {
         "name": "2-node linear beam",
@@ -241,7 +241,7 @@ ELEMENT_LIBRARY = {
         ],
         "alternatives": ["B32", "B31OS"]
     },
-    
+
     "B32": {
         "name": "3-node quadratic beam",
         "name_cn": "3节点二次梁",
@@ -259,7 +259,7 @@ ELEMENT_LIBRARY = {
         ],
         "alternatives": ["B31"]
     },
-    
+
     # Explicit Elements
     "C3D8R (Explicit)": {
         "name": "8-node brick for Explicit",
@@ -279,11 +279,11 @@ ELEMENT_LIBRARY = {
         ],
         "alternatives": ["C3D10M"]
     },
-    
+
     # =========================================================================
     # Additional Shell Elements | 补充壳单元
     # =========================================================================
-    
+
     "S8R": {
         "name": "8-node quadratic shell (reduced integration)",
         "name_cn": "8节点二次壳（减缩积分）",
@@ -302,7 +302,7 @@ ELEMENT_LIBRARY = {
         ],
         "alternatives": ["S4R", "S4"]
     },
-    
+
     "SC8R": {
         "name": "8-node continuum shell (reduced integration)",
         "name_cn": "8节点连续体壳（减缩积分）",
@@ -321,7 +321,7 @@ ELEMENT_LIBRARY = {
         ],
         "alternatives": ["S4R", "S8R"]
     },
-    
+
     "STRI65": {
         "name": "6-node triangular shell (5 integration points)",
         "name_cn": "6节点三角形壳（5积分点）",
@@ -339,11 +339,11 @@ ELEMENT_LIBRARY = {
         ],
         "alternatives": ["S8R", "S4R"]
     },
-    
+
     # =========================================================================
     # Additional Beam Elements | 补充梁单元
     # =========================================================================
-    
+
     "B31OS": {
         "name": "2-node linear beam (open section)",
         "name_cn": "2节点线性梁（开口截面）",
@@ -362,7 +362,7 @@ ELEMENT_LIBRARY = {
         ],
         "alternatives": ["B31"]
     },
-    
+
     "B33": {
         "name": "2-node cubic beam",
         "name_cn": "2节点三次梁",
@@ -381,7 +381,7 @@ ELEMENT_LIBRARY = {
         ],
         "alternatives": ["B31", "B32"]
     },
-    
+
     "PIPE31": {
         "name": "2-node linear pipe element",
         "name_cn": "2节点线性管单元",
@@ -399,11 +399,11 @@ ELEMENT_LIBRARY = {
         ],
         "alternatives": ["B31"]
     },
-    
+
     # =========================================================================
     # Connector Elements | 连接单元
     # =========================================================================
-    
+
     "CONN3D2": {
         "name": "3D connector element",
         "name_cn": "三维连接器单元",
@@ -424,7 +424,7 @@ ELEMENT_LIBRARY = {
         "alternatives": ["SPRING", "DASHPOT"],
         "keywords": "*CONNECTOR SECTION, *CONNECTOR BEHAVIOR"
     },
-    
+
     "CONN2D2": {
         "name": "2D connector element",
         "name_cn": "二维连接器单元",
@@ -441,11 +441,11 @@ ELEMENT_LIBRARY = {
         ],
         "alternatives": ["CONN3D2"]
     },
-    
+
     # =========================================================================
     # Special Elements | 特殊单元
     # =========================================================================
-    
+
     "MASS": {
         "name": "Point mass element",
         "name_cn": "质点单元",
@@ -465,7 +465,7 @@ ELEMENT_LIBRARY = {
         "alternatives": [],
         "keywords": "*MASS"
     },
-    
+
     "ROTARYI": {
         "name": "Rotary inertia element",
         "name_cn": "转动惯量单元",
@@ -485,7 +485,7 @@ ELEMENT_LIBRARY = {
         "alternatives": [],
         "keywords": "*ROTARY INERTIA"
     },
-    
+
     "SPRING1": {
         "name": "Spring element to ground",
         "name_cn": "接地弹簧单元",
@@ -502,7 +502,7 @@ ELEMENT_LIBRARY = {
         ],
         "alternatives": ["SPRING2"]
     },
-    
+
     "SPRING2": {
         "name": "Spring element between nodes",
         "name_cn": "节点间弹簧单元",
@@ -520,7 +520,7 @@ ELEMENT_LIBRARY = {
         "alternatives": ["CONN3D2"],
         "keywords": "*SPRING"
     },
-    
+
     "DASHPOT1": {
         "name": "Dashpot element to ground",
         "name_cn": "接地阻尼器单元",
@@ -537,7 +537,7 @@ ELEMENT_LIBRARY = {
         ],
         "alternatives": ["DASHPOT2"]
     },
-    
+
     "DASHPOT2": {
         "name": "Dashpot element between nodes",
         "name_cn": "节点间阻尼器单元",
@@ -555,11 +555,11 @@ ELEMENT_LIBRARY = {
         "alternatives": ["CONN3D2"],
         "keywords": "*DASHPOT"
     },
-    
+
     # =========================================================================
     # Cohesive Elements | 内聚单元
     # =========================================================================
-    
+
     "COH3D8": {
         "name": "8-node 3D cohesive element",
         "name_cn": "8节点三维内聚单元",
@@ -579,7 +579,7 @@ ELEMENT_LIBRARY = {
         "alternatives": ["COH3D6"],
         "keywords": "*COHESIVE SECTION, *DAMAGE INITIATION, *DAMAGE EVOLUTION"
     },
-    
+
     "COH3D6": {
         "name": "6-node 3D cohesive element",
         "name_cn": "6节点三维内聚单元",
@@ -596,11 +596,11 @@ ELEMENT_LIBRARY = {
         ],
         "alternatives": ["COH3D8"]
     },
-    
+
     # =========================================================================
     # Thermal Elements | 热单元
     # =========================================================================
-    
+
     "DC3D8": {
         "name": "8-node linear heat transfer brick",
         "name_cn": "8节点线性传热六面体",
@@ -618,7 +618,7 @@ ELEMENT_LIBRARY = {
         ],
         "alternatives": ["DC3D20"]
     },
-    
+
     "DC3D20": {
         "name": "20-node quadratic heat transfer brick",
         "name_cn": "20节点二次传热六面体",
@@ -641,10 +641,10 @@ ELEMENT_LIBRARY = {
 def get_element_info(element_type: str) -> Optional[dict]:
     """
     Get information about an element type.
-    
+
     Args:
         element_type: Element type name (e.g., 'C3D8R')
-        
+
     Returns:
         Element information dictionary or None if not found
     """
@@ -659,18 +659,18 @@ def recommend_element(
 ) -> list[str]:
     """
     Recommend suitable element types based on analysis requirements.
-    
+
     Args:
         dimension: 'solid', 'shell', or 'beam'
         analysis_type: 'general', 'stress', 'impact'
         large_deformation: Whether large deformation is expected
         contact: Whether contact is involved
-        
+
     Returns:
         List of recommended element types
     """
     recommendations = []
-    
+
     if dimension == "solid":
         if contact or large_deformation:
             recommendations = ["C3D8R", "C3D10M"]
@@ -678,14 +678,14 @@ def recommend_element(
             recommendations = ["C3D20R", "C3D10"]
         else:
             recommendations = ["C3D8R", "C3D8I"]
-    
+
     elif dimension == "shell":
         if large_deformation or contact:
             recommendations = ["S4R"]
         else:
             recommendations = ["S4R", "S4"]
-    
+
     elif dimension == "beam":
         recommendations = ["B31", "B32"]
-    
+
     return recommendations

@@ -2,14 +2,14 @@
 
 from fastapi import APIRouter
 
+from .chat import router as chat_router
+from .conversations import router as conversations_router
 from .diagnose import router as diagnose_router
 from .generate import router as generate_router
-from .mesh import router as mesh_router
-from .chat import router as chat_router
 from .knowledge import router as knowledge_router
-from .conversations import router as conversations_router
-from .providers import router as providers_router
+from .mesh import router as mesh_router
 from .models import router as models_router
+from .providers import router as providers_router
 from .workspace import router as workspace_router
 
 router = APIRouter()

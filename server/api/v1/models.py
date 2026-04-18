@@ -1,13 +1,14 @@
 """Models API — list available models and manage active model selection."""
 
 import json
-from typing import Optional, List
+from typing import List, Optional
 
+import redis.asyncio as redis
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-import redis.asyncio as redis
 
 from ...core.config import settings
+from .providers import PROVIDER_CATALOG
 
 router = APIRouter()
 
@@ -24,10 +25,6 @@ async def get_redis() -> redis.Redis:
             decode_responses=True,
         )
     return _redis_pool
-
-
-# Import provider catalog from providers module
-from .providers import PROVIDER_CATALOG, get_redis as providers_get_redis
 
 
 class ModelInfo(BaseModel):

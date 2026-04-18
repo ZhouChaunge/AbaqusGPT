@@ -2,9 +2,8 @@
 
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import Optional
 
-from fastapi import APIRouter, File, UploadFile, HTTPException, Query
+from fastapi import APIRouter, File, HTTPException, Query, UploadFile
 from pydantic import BaseModel
 
 from abaqusgpt.agents.mesh_advisor import MeshAdvisor
@@ -41,7 +40,7 @@ async def analyze_mesh(
 ):
     """
     Analyze mesh quality from .inp file.
-    
+
     Returns quality metrics and optimization suggestions.
     """
     suffix = Path(file.filename).suffix.lower()
@@ -50,16 +49,16 @@ async def analyze_mesh(
             status_code=400,
             detail=f"Unsupported file type: {suffix}. Only .inp files are supported."
         )
-    
+
     with NamedTemporaryFile(delete=False, suffix=".inp") as tmp:
         content = await file.read()
         tmp.write(content)
         tmp_path = Path(tmp.name)
-    
+
     try:
         advisor = MeshAdvisor()
         result = advisor.analyze(tmp_path)
-        
+
         return MeshAnalysisResponse(
             metrics=MeshQualityMetrics(
                 total_elements=0,
@@ -87,14 +86,14 @@ async def recommend_element(
     Recommend suitable element types based on analysis requirements.
     """
     from abaqusgpt.knowledge.element_library import recommend_element
-    
+
     recommendations = recommend_element(
         dimension=dimension,
         analysis_type=analysis_type,
         large_deformation=large_deformation,
         contact=contact,
     )
-    
+
     return {
         "recommendations": recommendations,
         "criteria": {
@@ -112,9 +111,9 @@ async def get_element_info(element_type: str):
     Get detailed information about an element type.
     """
     from abaqusgpt.knowledge.element_library import get_element_info
-    
+
     info = get_element_info(element_type)
     if not info:
         raise HTTPException(status_code=404, detail=f"Element type '{element_type}' not found")
-    
+
     return info

@@ -4,7 +4,7 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Optional
 
-from fastapi import APIRouter, File, UploadFile, HTTPException, Query
+from fastapi import APIRouter, File, HTTPException, Query, UploadFile
 from pydantic import BaseModel
 
 from abaqusgpt.agents.converge_doctor import ConvergeDoctor
@@ -37,7 +37,7 @@ async def diagnose_file(
 ):
     """
     Diagnose convergence issues from uploaded file.
-    
+
     Supports: .msg, .sta, .dat files
     """
     # Validate file extension
@@ -47,17 +47,17 @@ async def diagnose_file(
             status_code=400,
             detail=f"Unsupported file type: {suffix}. Supported: .msg, .sta, .dat"
         )
-    
+
     # Save to temp file
     with NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
         content = await file.read()
         tmp.write(content)
         tmp_path = Path(tmp.name)
-    
+
     try:
         doctor = ConvergeDoctor()
         result = doctor.diagnose(tmp_path, verbose=verbose)
-        
+
         # Parse result into structured response
         return DiagnoseResponse(
             status="error" if "错误" in result or "失败" in result else "warning",
@@ -77,7 +77,7 @@ async def diagnose_file(
 async def diagnose_text(request: DiagnoseTextRequest):
     """
     Diagnose from pasted text content.
-    
+
     Useful for quick diagnosis without file upload.
     """
     # Create temp file with content
@@ -85,11 +85,11 @@ async def diagnose_text(request: DiagnoseTextRequest):
     with NamedTemporaryFile(delete=False, suffix=suffix, mode="w") as tmp:
         tmp.write(request.content)
         tmp_path = Path(tmp.name)
-    
+
     try:
         doctor = ConvergeDoctor()
         result = doctor.diagnose(tmp_path, verbose=False)
-        
+
         return DiagnoseResponse(
             status="error" if "错误" in result or "失败" in result else "warning",
             errors=[],

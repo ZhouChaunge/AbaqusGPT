@@ -1,0 +1,39 @@
+# Abaqus 解析器回归测试 — 验证"领域核心逻辑对不对"
+# 对标 StructureClaw analysis-regression: 只在相关代码变更时触发，跨平台
+name: Parser Regression
+
+on:
+  pull_request:
+    paths:
+      - "abaqusgpt/**"
+      - "tests/**"
+      - "pyproject.toml"
+      - "requirements.txt"
+      - ".github/workflows/parser-regression.yml"
+  push:
+    branches: [master]
+    paths:
+      - "abaqusgpt/**"
+      - "tests/**"
+      - "pyproject.toml"
+      - "requirements.txt"
+      - ".github/workflows/parser-regression.yml"
+
+jobs:
+  parser-tests:
+    name: Parser Tests (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+      - name: Run parser tests
+        run: pytest tests/ -v --tb=short --cov=abaqusgpt/parsers --cov-report=term-missing

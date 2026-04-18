@@ -1,0 +1,57 @@
+# 安装冒烟测试 — 每次 PR 必跑的核心门禁
+# 对标 StructureClaw install-smoke: 验证"代码能不能装起来、能不能构建"
+name: Install Smoke
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+jobs:
+  # ── Python 代码质量 ──────────────────────────────────────────
+  python-lint:
+    name: Python Lint (ruff)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install ruff
+      - name: Ruff lint
+        run: ruff check .
+      # TODO: 全量格式化后启用 → ruff format --check .
+
+  # ── 前端类型检查 + 构建 ─────────────────────────────────────
+  frontend-build:
+    name: Frontend (tsc + build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm install
+      - name: TypeScript type-check
+        run: npx tsc --noEmit
+      - name: ESLint
+        run: npx eslint . --ext ts,tsx --report-unused-disable-directives
+      - name: Vite build
+        run: npx vite build
+
+  # ── Docker 镜像构建 ─────────────────────────────────────────
+  docker-build:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build backend image
+        run: docker build -f Dockerfile.backend -t abaqusgpt-backend:ci .
+      - name: Build frontend image
+        run: docker build -f frontend/Dockerfile -t abaqusgpt-frontend:ci frontend/

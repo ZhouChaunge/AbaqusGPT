@@ -1,11 +1,12 @@
 """Knowledge base API endpoints."""
 
-from typing import Optional, List, Dict, Any
+from typing import List, Optional
+
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
-from abaqusgpt.knowledge.error_codes import ERROR_DATABASE, get_error_info, get_errors_by_category
 from abaqusgpt.knowledge.element_library import ELEMENT_LIBRARY
+from abaqusgpt.knowledge.error_codes import ERROR_DATABASE, get_errors_by_category
 
 router = APIRouter()
 
@@ -68,7 +69,7 @@ async def list_errors(
 ):
     """
     List known Abaqus error codes and solutions.
-    
+
     Categories:
     - convergence: 收敛问题
     - contact: 接触问题
@@ -81,7 +82,7 @@ async def list_errors(
         raw_errors = get_errors_by_category(category)
     else:
         raw_errors = [{"pattern": k, **v} for k, v in ERROR_DATABASE.items()]
-    
+
     # Transform to frontend format
     errors = []
     for err in raw_errors:
@@ -93,7 +94,7 @@ async def list_errors(
             causes=err.get("causes", []),
             solutions=err.get("solutions", []),
         ))
-    
+
     return ErrorListResponse(errors=errors)
 
 
@@ -104,7 +105,7 @@ async def get_error(pattern: str):
     for key, info in ERROR_DATABASE.items():
         if pattern.upper() in key:
             return {"pattern": key, **info}
-    
+
     raise HTTPException(status_code=404, detail=f"Error pattern '{pattern}' not found")
 
 
@@ -122,7 +123,7 @@ async def list_elements(
 ):
     """List available element types."""
     elements = []
-    
+
     for elem_type, info in ELEMENT_LIBRARY.items():
         # Apply filters
         if dimension:
@@ -131,12 +132,12 @@ async def list_elements(
         if integration:
             if info.get("integration") != integration:
                 continue
-        
+
         # Calculate integration points
         nodes = info.get("nodes", 0)
         integ_type = info.get("integration", "full")
         integ_points = INTEGRATION_POINTS.get(integ_type, {}).get(str(nodes), nodes)
-        
+
         elements.append(ElementInfoFrontend(
             name=elem_type,
             type=info.get("integration", "full"),
@@ -146,7 +147,7 @@ async def list_elements(
             applications=info.get("use_cases", []),
             tips=info.get("warnings", []),
         ))
-    
+
     return ElementListResponse(elements=elements)
 
 
@@ -158,12 +159,12 @@ async def search_knowledge(
 ):
     """
     Search across all knowledge bases.
-    
+
     Searches errors, elements, materials, and domain-specific knowledge.
     """
     results = []
     query_upper = query.upper()
-    
+
     # Search errors
     for pattern, info in ERROR_DATABASE.items():
         if query_upper in pattern or any(query.lower() in cause.lower() for cause in info["causes"]):
@@ -173,7 +174,7 @@ async def search_knowledge(
                 content="; ".join(info["causes"][:2]),
                 relevance=0.9 if query_upper in pattern else 0.7,
             ))
-    
+
     # Search elements
     for name, info in ELEMENT_LIBRARY.items():
         if query_upper in name or query.lower() in info.get("name_cn", "").lower():
@@ -183,7 +184,7 @@ async def search_knowledge(
                 content=info.get("name_cn", info.get("name", "")),
                 relevance=0.9 if query_upper in name else 0.7,
             ))
-    
+
     # Sort by relevance and limit
     results.sort(key=lambda x: x.relevance, reverse=True)
     return results[:limit]
@@ -196,7 +197,7 @@ async def get_domain_knowledge(
 ):
     """
     Get domain-specific knowledge.
-    
+
     Domains: geotechnical, structural, mechanical, thermal, impact, composite, biomechanics, electromagnetic
     """
     domain_info = {
@@ -367,8 +368,8 @@ async def get_domain_knowledge(
 """,
         },
     }
-    
+
     if domain not in domain_info:
         raise HTTPException(status_code=404, detail=f"Domain '{domain}' not found")
-    
+
     return domain_info[domain]

@@ -3,11 +3,11 @@
 import json
 import uuid
 from datetime import datetime, timezone
-from typing import Optional, List
+from typing import List, Optional
 
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
 import redis.asyncio as redis
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 
 from ...core.config import settings
 

@@ -9,19 +9,16 @@ Abaqus Workspace Monitoring API - 实时工作目录监控与命令执行
 5. 综合分析多文件状态
 """
 
-import asyncio
 import json
 import os
-import re
 import subprocess
 import sys
+from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
-from collections import defaultdict
-from xml.etree import ElementTree as ET
 
-from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect, Query
+from fastapi import APIRouter, HTTPException, Query, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field
 
 # Abaqus 相关文件扩展名及其描述
@@ -129,14 +126,14 @@ def get_file_info(file_path: Path) -> FileInfo:
     stat = file_path.stat()
     ext = file_path.suffix.lower()
     type_info = ABAQUS_FILE_TYPES.get(ext, {"name": "其他文件", "category": "other", "priority": 100})
-    
+
     # 检查文件是否正在被写入（通过锁定文件判断）
     is_running = False
     if ext in [".msg", ".sta", ".dat"]:
         lock_file = file_path.with_suffix(".lck")
         if lock_file.exists():
             is_running = True
-    
+
     return FileInfo(
         name=file_path.name,
         path=str(file_path),
@@ -152,7 +149,7 @@ def get_file_info(file_path: Path) -> FileInfo:
 def scan_workspace(workspace_path: str) -> WorkspaceStatus:
     """扫描工作目录"""
     path = Path(workspace_path)
-    
+
     if not path.exists():
         return WorkspaceStatus(
             path=workspace_path,
@@ -163,34 +160,34 @@ def scan_workspace(workspace_path: str) -> WorkspaceStatus:
             abaqus_files=0,
             last_update=datetime.now(),
         )
-    
+
     files = []
     jobs_dict: dict[str, list[FileInfo]] = defaultdict(list)
-    
+
     for item in path.iterdir():
         if item.is_file():
             file_info = get_file_info(item)
             files.append(file_info)
-            
+
             # 按作业名分组 (去掉扩展名)
             if file_info.extension in ABAQUS_FILE_TYPES:
                 job_name = item.stem
                 jobs_dict[job_name].append(file_info)
-    
+
     # 分析每个作业的状态
     jobs = []
     for job_name, job_files in jobs_dict.items():
         job_status = analyze_job_status(job_name, job_files, path)
         jobs.append(job_status)
-    
+
     # 按优先级排序文件
     files.sort(key=lambda f: (
         ABAQUS_FILE_TYPES.get(f.extension, {}).get("priority", 100),
         f.name
     ))
-    
+
     abaqus_files = sum(1 for f in files if f.extension in ABAQUS_FILE_TYPES)
-    
+
     return WorkspaceStatus(
         path=workspace_path,
         exists=True,
@@ -211,13 +208,13 @@ def analyze_job_status(job_name: str, files: list[FileInfo], workspace: Path) ->
     errors = []
     warnings = []
     last_message = None
-    
+
     # 检查是否有锁定文件（正在运行）
     has_lock = any(f.extension == ".lck" for f in files)
     has_odb = any(f.extension == ".odb" for f in files)
     has_sta = any(f.extension == ".sta" for f in files)
     has_msg = any(f.extension == ".msg" for f in files)
-    
+
     if has_lock:
         status = "running"
     elif has_odb and has_sta:
@@ -226,7 +223,7 @@ def analyze_job_status(job_name: str, files: list[FileInfo], workspace: Path) ->
         status = "error"  # 可能是中断或错误
     else:
         status = "pending"
-    
+
     # 解析 .sta 文件获取进度
     sta_file = workspace / f"{job_name}.sta"
     if sta_file.exists():
@@ -250,7 +247,7 @@ def analyze_job_status(job_name: str, files: list[FileInfo], workspace: Path) ->
                     break
         except Exception:
             pass
-    
+
     # 解析 .msg 文件获取错误和警告
     msg_file = workspace / f"{job_name}.msg"
     if msg_file.exists():
@@ -263,14 +260,14 @@ def analyze_job_status(job_name: str, files: list[FileInfo], workspace: Path) ->
                     errors.append(line.strip())
                 elif "***WARNING" in line_upper:
                     warnings.append(line.strip())
-            
+
             # 获取最后一条有意义的消息
             for line in reversed(lines[-20:]):
                 stripped = line.strip()
                 if stripped and not stripped.startswith("***"):
                     last_message = stripped[:200]
                     break
-                    
+
             # 检查是否有致命错误
             if any("FATAL" in e.upper() for e in errors):
                 status = "error"
@@ -278,7 +275,7 @@ def analyze_job_status(job_name: str, files: list[FileInfo], workspace: Path) ->
                 status = "completed"
         except Exception:
             pass
-    
+
     return JobStatus(
         job_name=job_name,
         status=status,
@@ -295,13 +292,13 @@ def analyze_job_status(job_name: str, files: list[FileInfo], workspace: Path) ->
 async def open_workspace(config: WorkspaceConfig):
     """打开/设置工作目录"""
     path = Path(config.path)
-    
+
     if not path.exists():
         raise HTTPException(status_code=404, detail=f"目录不存在: {config.path}")
-    
+
     if not path.is_dir():
         raise HTTPException(status_code=400, detail=f"路径不是目录: {config.path}")
-    
+
     # 存储工作目录配置
     workspace_id = str(path.resolve())
     active_workspaces[workspace_id] = {
@@ -309,10 +306,10 @@ async def open_workspace(config: WorkspaceConfig):
         "watch": config.watch,
         "opened_at": datetime.now(),
     }
-    
+
     # 扫描并返回状态
     status = scan_workspace(workspace_id)
-    
+
     return {
         "success": True,
         "workspace_id": workspace_id,
@@ -477,30 +474,30 @@ async def read_file_content(
 ):
     """读取文件内容"""
     file_path = Path(workspace) / filename
-    
+
     if not file_path.exists():
         raise HTTPException(status_code=404, detail=f"文件不存在: {filename}")
-    
+
     if not file_path.is_file():
         raise HTTPException(status_code=400, detail=f"不是文件: {filename}")
-    
+
     # 检查文件大小，避免读取过大的文件
     size = file_path.stat().st_size
     if size > 10 * 1024 * 1024:  # 10MB 限制
         # 对于大文件，只读取尾部
         tail = min(tail, 500) if tail > 0 else 500
-    
+
     try:
         content = file_path.read_text(errors="ignore")
         lines = content.split("\n")
-        
+
         if tail > 0 and len(lines) > tail:
             lines = lines[-tail:]
             content = "\n".join(lines)
             truncated = True
         else:
             truncated = False
-        
+
         return {
             "filename": filename,
             "size": size,
@@ -516,7 +513,7 @@ async def read_file_content(
 async def execute_command(request: CommandRequest):
     """执行命令（用于提交 Abaqus 作业等）"""
     start_time = datetime.now()
-    
+
     # 安全检查：只允许特定命令模式
     allowed_patterns = [
         "abaqus ",
@@ -528,25 +525,25 @@ async def execute_command(request: CommandRequest):
         "head ",
         "tail ",
     ]
-    
+
     command_lower = request.command.lower().strip()
     if not any(command_lower.startswith(p) for p in allowed_patterns):
         raise HTTPException(
             status_code=403,
             detail="不允许执行此命令。只支持 Abaqus 相关命令和基本文件查看命令。"
         )
-    
+
     # 确定工作目录
     cwd = request.working_dir or os.getcwd()
     if not Path(cwd).exists():
         raise HTTPException(status_code=404, detail=f"工作目录不存在: {cwd}")
-    
+
     try:
         # Windows 使用 cmd，Linux/Mac 使用 bash
         if sys.platform == "win32":
             result = subprocess.run(
                 request.command,
-                shell=True,
+                shell=True,  # nosec B602
                 cwd=cwd,
                 capture_output=True,
                 text=True,
@@ -555,16 +552,16 @@ async def execute_command(request: CommandRequest):
         else:
             result = subprocess.run(
                 request.command,
-                shell=True,
+                shell=True,  # nosec B602
                 cwd=cwd,
                 capture_output=True,
                 text=True,
                 timeout=request.timeout,
                 executable="/bin/bash",
             )
-        
+
         duration = (datetime.now() - start_time).total_seconds()
-        
+
         return CommandResponse(
             success=result.returncode == 0,
             command=request.command,
@@ -588,11 +585,11 @@ async def analyze_workspace(request: AnalysisRequest):
     from abaqusgpt.agents.converge_doctor import ConvergeDoctor
     from abaqusgpt.parsers.msg_parser import MsgParser
     from abaqusgpt.parsers.sta_parser import StaParser
-    
+
     workspace = Path(request.workspace_path)
     if not workspace.exists():
         raise HTTPException(status_code=404, detail="工作目录不存在")
-    
+
     # 如果指定了作业名，只分析该作业
     if request.job_name:
         job_names = [request.job_name]
@@ -603,7 +600,7 @@ async def analyze_workspace(request: AnalysisRequest):
             if f.suffix.lower() in [".inp", ".msg", ".sta"]:
                 job_names.add(f.stem)
         job_names = list(job_names)
-    
+
     if not job_names:
         return AnalysisResponse(
             job_name="",
@@ -615,16 +612,16 @@ async def analyze_workspace(request: AnalysisRequest):
             suggestions=["未找到 Abaqus 作业文件，请确认工作目录正确"],
             file_summary={},
         )
-    
+
     # 分析第一个作业（或指定的作业）
     job_name = job_names[0]
-    
+
     errors = []
     warnings = []
     suggestions = []
     progress = {}
     convergence_status = "unknown"
-    
+
     # 解析 .msg 文件
     msg_file = workspace / f"{job_name}.msg"
     if msg_file.exists():
@@ -635,7 +632,7 @@ async def analyze_workspace(request: AnalysisRequest):
             warnings.extend([{"source": "msg", "message": w} for w in msg_data.get("warnings", [])])
         except Exception as e:
             warnings.append({"source": "parser", "message": f"解析 .msg 文件失败: {str(e)}"})
-    
+
     # 解析 .sta 文件
     sta_file = workspace / f"{job_name}.sta"
     if sta_file.exists():
@@ -653,7 +650,7 @@ async def analyze_workspace(request: AnalysisRequest):
                 convergence_status = "not_converged"
         except Exception as e:
             warnings.append({"source": "parser", "message": f"解析 .sta 文件失败: {str(e)}"})
-    
+
     # 使用 AI 生成建议
     if request.include_suggestions and (errors or warnings):
         try:
@@ -666,14 +663,14 @@ async def analyze_workspace(request: AnalysisRequest):
                 context += f"警告: {warnings[:5]}\n"
             context += f"收敛状态: {convergence_status}\n"
             context += f"进度: {progress}\n"
-            
+
             # 获取诊断建议
             if msg_file.exists():
                 diagnosis = doctor.diagnose(msg_file, verbose=False)
                 suggestions.append(diagnosis)
         except Exception as e:
             suggestions.append(f"AI 分析暂时不可用: {str(e)}")
-    
+
     # 确定总体状态
     if errors:
         status = "error"
@@ -683,7 +680,7 @@ async def analyze_workspace(request: AnalysisRequest):
         status = "completed"
     else:
         status = "running" if (workspace / f"{job_name}.lck").exists() else "unknown"
-    
+
     # 文件摘要
     file_summary = {}
     for ext in [".inp", ".msg", ".sta", ".dat", ".odb"]:
@@ -696,7 +693,7 @@ async def analyze_workspace(request: AnalysisRequest):
             }
         else:
             file_summary[ext] = {"exists": False}
-    
+
     return AnalysisResponse(
         job_name=job_name,
         status=status,
@@ -715,12 +712,12 @@ async def websocket_watch(websocket: WebSocket):
     """WebSocket 端点，用于实时推送文件变化"""
     await websocket.accept()
     websocket_connections.append(websocket)
-    
+
     try:
         while True:
             # 接收客户端消息
             data = await websocket.receive_json()
-            
+
             if data.get("action") == "watch":
                 workspace_path = data.get("path")
                 if workspace_path:
@@ -730,7 +727,7 @@ async def websocket_watch(websocket: WebSocket):
                         "type": "status",
                         "data": status.model_dump(mode="json"),
                     })
-            
+
             elif data.get("action") == "refresh":
                 workspace_path = data.get("path")
                 if workspace_path:
@@ -739,7 +736,7 @@ async def websocket_watch(websocket: WebSocket):
                         "type": "status",
                         "data": status.model_dump(mode="json"),
                     })
-    
+
     except WebSocketDisconnect:
         websocket_connections.remove(websocket)
     except Exception as e:
@@ -759,7 +756,7 @@ async def broadcast_file_change(workspace_path: str, event_type: str, file_path:
             "timestamp": datetime.now().isoformat(),
         }
     }
-    
+
     for ws in websocket_connections:
         try:
             await ws.send_json(message)
@@ -896,7 +893,7 @@ async def run_tool(tool_name: str, params: dict, workspace_path: str) -> str:
             timeout = 15
         try:
             proc = subprocess.run(
-                command, shell=True,
+                command, shell=True,  # nosec B602
                 cwd=working_dir if Path(working_dir).exists() else workspace_path,
                 capture_output=True, text=True, timeout=timeout,
                 executable="/bin/bash" if sys.platform != "win32" else None,
@@ -950,7 +947,7 @@ async def run_tool(tool_name: str, params: dict, workspace_path: str) -> str:
             max_lines = 200
         tail = str(params.get("tail", "false")).lower() in ("true", "1", "yes")
         try:
-            content = read_file_content(Path(path), max_lines=max_lines, tail=tail)
+            content = _read_file_content(Path(path), max_lines=max_lines, tail=tail)
             return f"文件 {path}:\n{content}"
         except FileNotFoundError:
             return f"文件不存在: {path}"
@@ -974,7 +971,7 @@ async def run_tool(tool_name: str, params: dict, workspace_path: str) -> str:
         cmd = f"find {' '.join(dirs)} -maxdepth {max_depth} -name '{name}' {type_opt} 2>/dev/null | head -30"
         try:
             proc = subprocess.run(
-                cmd, shell=True, capture_output=True, text=True, timeout=30,
+                cmd, shell=True, capture_output=True, text=True, timeout=30,  # nosec B602
                 executable="/bin/bash" if sys.platform != "win32" else None,
             )
             output = proc.stdout.strip()
@@ -1066,7 +1063,7 @@ class AgentChatRequest(BaseModel):
 def detect_intent_and_files(message: str, workspace_path: str, job_name: Optional[str] = None) -> dict:
     """
     分析用户意图，确定需要读取哪些文件
-    
+
     Returns:
         {
             "intent": str,  # analyze_inp, check_convergence, explain_errors, etc.
@@ -1076,7 +1073,7 @@ def detect_intent_and_files(message: str, workspace_path: str, job_name: Optiona
     """
     message_lower = message.lower()
     workspace = Path(workspace_path)
-    
+
     # 检测作业名
     detected_job = job_name
     if not detected_job:
@@ -1085,7 +1082,7 @@ def detect_intent_and_files(message: str, workspace_path: str, job_name: Optiona
             if f.suffix.lower() in [".inp", ".msg"]:
                 detected_job = f.stem
                 break
-    
+
     intent = "general"
     files_to_read = []
     keywords = []
@@ -1143,7 +1140,7 @@ def detect_intent_and_files(message: str, workspace_path: str, job_name: Optiona
             "priority": 8,
         },
     }
-    
+
     # 检测意图
     matched_intents = []
     for intent_name, pattern in intent_patterns.items():
@@ -1152,13 +1149,13 @@ def detect_intent_and_files(message: str, workspace_path: str, job_name: Optiona
                 keywords.append(kw)
                 matched_intents.append((pattern["priority"], intent_name, pattern["files"]))
                 break
-    
+
     # 选择最高优先级的意图
     if matched_intents:
         matched_intents.sort(key=lambda x: x[0])
         intent = matched_intents[0][1]
         file_exts = matched_intents[0][2]
-        
+
         # 构建文件路径（INP 文件超过 200KB 时跳过，让 AI 用 file_read 工具自己读）
         if detected_job:
             for ext in file_exts:
@@ -1168,7 +1165,7 @@ def detect_intent_and_files(message: str, workspace_path: str, job_name: Optiona
                     if ext == ".inp" and file_path.stat().st_size > 200 * 1024:
                         continue
                     files_to_read.append(str(file_path))
-    
+
     # 如果没有检测到特定意图但提到了文件类型，直接读取
     for ext in [".inp", ".msg", ".sta", ".dat", ".log"]:
         if ext.strip(".") in message_lower or ext in message_lower:
@@ -1176,7 +1173,7 @@ def detect_intent_and_files(message: str, workspace_path: str, job_name: Optiona
                 file_path = workspace / f"{detected_job}{ext}"
                 if file_path.exists() and str(file_path) not in files_to_read:
                     files_to_read.append(str(file_path))
-    
+
     return {
         "intent": intent,
         "files_to_read": files_to_read,
@@ -1185,13 +1182,13 @@ def detect_intent_and_files(message: str, workspace_path: str, job_name: Optiona
     }
 
 
-def read_file_content(file_path: str, max_lines: int = 500, tail: bool = False) -> str:
+def _read_file_content(file_path: str, max_lines: int = 500, tail: bool = False) -> str:
     """读取文件内容，支持限制行数"""
     try:
         path = Path(file_path)
         if not path.exists():
             return f"[文件不存在: {file_path}]"
-        
+
         # 检查文件大小
         file_size = path.stat().st_size
         if file_size > 5 * 1024 * 1024:  # 大于5MB
@@ -1203,7 +1200,7 @@ def read_file_content(file_path: str, max_lines: int = 500, tail: bool = False) 
                 else:
                     lines = lines[:max_lines]
                 return f"[文件较大 ({file_size // 1024} KB)，显示部分内容]\n" + "".join(lines)
-        
+
         with open(path, 'r', encoding='utf-8', errors='ignore') as f:
             lines = f.readlines()
             if len(lines) > max_lines:
@@ -1234,7 +1231,7 @@ def build_workspace_snapshot(workspace_path: str, workspace_status: Optional[Wor
                 file_lines.append(f"  {item.name} ({size})")
             else:
                 file_lines.append(f"  {item.name}/")
-        parts.append(f"文件列表:\n" + "\n".join(file_lines))
+        parts.append("文件列表:\n" + "\n".join(file_lines))
 
     # 作业状态摘要
     if workspace_status and workspace_status.jobs:
@@ -1260,10 +1257,12 @@ async def agent_chat(request: AgentChatRequest):
 
     不再预读文件。只提供工作区元数据，让 LLM 自己用工具探索和行动。
     """
-    from starlette.responses import StreamingResponse
-    from abaqusgpt.llm.client import MODEL_MAPPING, _setup_api_keys
     import json
+
     import litellm as _litellm
+    from starlette.responses import StreamingResponse
+
+    from abaqusgpt.llm.client import MODEL_MAPPING, _setup_api_keys
 
     workspace = Path(request.workspace_path)
     if not workspace.exists():

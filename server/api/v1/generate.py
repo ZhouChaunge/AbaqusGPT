@@ -1,6 +1,7 @@
 """Model generation API endpoints."""
 
-from typing import Optional, Literal
+from typing import Literal, Optional
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
@@ -14,7 +15,7 @@ class GenerateRequest(BaseModel):
     description: str = Field(..., description="Natural language description of the model")
     format: Literal["inp", "python"] = Field("inp", description="Output format")
     domain: Optional[str] = Field(None, description="Engineering domain for context")
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -37,7 +38,7 @@ class GenerateResponse(BaseModel):
 async def generate_model(request: GenerateRequest):
     """
     Generate Abaqus input file or Python script from natural language.
-    
+
     Supports:
     - inp: Abaqus input file format
     - python: Abaqus Python scripting
@@ -45,7 +46,7 @@ async def generate_model(request: GenerateRequest):
     try:
         generator = InpGenerator()
         code = generator.generate(request.description, format=request.format)
-        
+
         return GenerateResponse(
             code=code,
             format=request.format,
@@ -69,7 +70,7 @@ class TemplateRequest(BaseModel):
 async def generate_from_template(request: TemplateRequest):
     """
     Generate from predefined template with parameters.
-    
+
     Templates include:
     - simple_beam: 简支梁
     - plate_bending: 板弯曲

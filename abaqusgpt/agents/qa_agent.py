@@ -1,13 +1,12 @@
 """QAAgent - Answer questions about Abaqus."""
 
-from rich.panel import Panel
 
 from ..llm.client import get_llm_client
 
 
 class QAAgent:
     """Agent for answering Abaqus-related questions."""
-    
+
     SYSTEM_PROMPT = """You are AbaqusGPT, an expert AI assistant for Abaqus finite element analysis.
 
 Your expertise includes:
@@ -31,18 +30,18 @@ Guidelines:
 
 Respond in Chinese unless the user asks in English.
 """
-    
+
     def __init__(self, model: str = None):
         self.llm = get_llm_client(model=model)
-    
+
     def answer(self, question: str, history: list = None) -> str:
         """
         Answer a question about Abaqus.
-        
+
         Args:
             question: User's question
             history: Conversation history as list of {role, content} dicts
-            
+
         Returns:
             Answer as formatted string
         """

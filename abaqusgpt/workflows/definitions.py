@@ -8,7 +8,6 @@ Predefined workflows for common simulation tasks.
 
 from .engine import Workflow, WorkflowStep
 
-
 # =============================================================================
 # Workflow 1: Modeling to Solving | 建模到求解
 # =============================================================================
@@ -104,7 +103,7 @@ FULL_SIMULATION_LIFECYCLE = Workflow(
             description_cn="生成初始模型",
             requires_human_checkpoint=True,
         ),
-        
+
         # Phase 2: Meshing | 网格划分阶段
         WorkflowStep(
             name="mesh-generation",
@@ -119,7 +118,7 @@ FULL_SIMULATION_LIFECYCLE = Workflow(
             description_cn="检查网格质量",
             requires_human_checkpoint=True,
         ),
-        
+
         # Phase 3: Solving | 求解阶段
         WorkflowStep(
             name="pre-check",
@@ -127,7 +126,7 @@ FULL_SIMULATION_LIFECYCLE = Workflow(
             description="Pre-analysis validation",
             description_cn="分析前验证",
         ),
-        
+
         # Phase 4: Diagnosis | 诊断阶段
         WorkflowStep(
             name="result-parsing",
@@ -142,7 +141,7 @@ FULL_SIMULATION_LIFECYCLE = Workflow(
             description_cn="诊断问题",
             requires_human_checkpoint=True,
         ),
-        
+
         # Phase 5: Optimization | 优化阶段
         WorkflowStep(
             name="recommendations",
@@ -169,16 +168,16 @@ def get_workflow(name: str) -> Workflow:
     """
     Get a predefined workflow by name.
     按名称获取预定义工作流。
-    
+
     Args:
         name: Workflow name
-        
+
     Returns:
         Workflow instance (copy)
     """
     if name not in WORKFLOW_REGISTRY:
         raise ValueError(f"Unknown workflow: {name}. Available: {list(WORKFLOW_REGISTRY.keys())}")
-    
+
     # Return a copy to avoid modifying the original
     import copy
     return copy.deepcopy(WORKFLOW_REGISTRY[name])
