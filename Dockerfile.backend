@@ -16,9 +16,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY abaqusgpt/ ./abaqusgpt/
 COPY server/ ./server/
 COPY pyproject.toml .
+COPY README.md .
 
 # Install the package
-RUN pip install -e .
+RUN pip install .
 
 # Create directories
 RUN mkdir -p /app/data /app/logs

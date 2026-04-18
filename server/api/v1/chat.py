@@ -23,6 +23,7 @@ class ChatRequest(BaseModel):
     """Request model for chat."""
     message: str = Field(..., description="User message")
     domain: Optional[str] = Field(None, description="Engineering domain")
+    model: Optional[str] = Field(None, description="LLM model to use")
     history: List[Message] = Field(default_factory=list, description="Conversation history")
     
     class Config:
@@ -59,10 +60,10 @@ async def chat(request: ChatRequest):
     """
     try:
         if request.domain:
-            expert = DomainExpert(domain=request.domain)
+            expert = DomainExpert(domain=request.domain, model=request.model)
             response = expert.answer(request.message, history=request.history)
         else:
-            agent = QAAgent()
+            agent = QAAgent(model=request.model)
             response = agent.answer(request.message)
         
         return ChatResponse(
@@ -84,11 +85,11 @@ async def chat_stream(request: ChatRequest):
     async def generate():
         try:
             if request.domain:
-                expert = DomainExpert(domain=request.domain)
+                expert = DomainExpert(domain=request.domain, model=request.model)
                 # For now, simulate streaming by chunking the response
                 response = expert.answer(request.message, history=request.history)
             else:
-                agent = QAAgent()
+                agent = QAAgent(model=request.model)
                 response = agent.answer(request.message)
             
             # Simulate streaming by yielding chunks
