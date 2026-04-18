@@ -387,13 +387,17 @@ def _resolve_and_validate(workspace: str, rel_path: str) -> Path:
     """解析并验证路径在 workspace 内"""
     root = Path(workspace).resolve()
     target = (root / rel_path).resolve()
-    if not str(target).startswith(str(root)):
+    try:
+        in_workspace = os.path.commonpath([str(root), str(target)]) == str(root)
+    except ValueError:
+        in_workspace = False
+    if not in_workspace:
         raise HTTPException(status_code=403, detail="路径不在工作目录内")
     return target
 
 
 @router.post("/file-ops/rename")
-async def rename_file(req: FileOpRequest):
+def rename_file(req: FileOpRequest):
     """重命名文件或文件夹"""
     if not req.new_name:
         raise HTTPException(status_code=400, detail="缺少 new_name")
@@ -408,7 +412,7 @@ async def rename_file(req: FileOpRequest):
 
 
 @router.post("/file-ops/delete")
-async def delete_file(req: FileOpRequest):
+def delete_file(req: FileOpRequest):
     """删除文件或文件夹"""
     import shutil
     target = _resolve_and_validate(req.workspace, req.path)
@@ -422,7 +426,7 @@ async def delete_file(req: FileOpRequest):
 
 
 @router.post("/file-ops/copy")
-async def copy_file(req: FileOpRequest):
+def copy_file(req: FileOpRequest):
     """复制文件或文件夹到目标路径"""
     import shutil
     if not req.dest:
@@ -449,7 +453,7 @@ async def copy_file(req: FileOpRequest):
 
 
 @router.post("/file-ops/new-file")
-async def new_file(req: FileOpRequest):
+def new_file(req: FileOpRequest):
     """在指定路径创建空文件"""
     target = _resolve_and_validate(req.workspace, req.path)
     if target.exists():
@@ -460,7 +464,7 @@ async def new_file(req: FileOpRequest):
 
 
 @router.post("/file-ops/new-folder")
-async def new_folder(req: FileOpRequest):
+def new_folder(req: FileOpRequest):
     """创建新文件夹"""
     target = _resolve_and_validate(req.workspace, req.path)
     if target.exists():
@@ -470,13 +474,13 @@ async def new_folder(req: FileOpRequest):
 
 
 @router.get("/file/{filename:path}")
-async def read_file_content(
+def read_workspace_file(
     filename: str,
     workspace: str = Query(..., description="工作目录路径"),
     tail: int = Query(100, description="只读取最后N行，0表示全部"),
 ):
     """读取文件内容"""
-    file_path = Path(workspace) / filename
+    file_path = _resolve_and_validate(workspace, filename)
     
     if not file_path.exists():
         raise HTTPException(status_code=404, detail=f"文件不存在: {filename}")
@@ -491,14 +495,17 @@ async def read_file_content(
         tail = min(tail, 500) if tail > 0 else 500
     
     try:
-        content = file_path.read_text(errors="ignore")
-        lines = content.split("\n")
-        
-        if tail > 0 and len(lines) > tail:
-            lines = lines[-tail:]
-            content = "\n".join(lines)
-            truncated = True
+        if tail > 0:
+            # 流式读取尾部，避免大文件全量加载导致 OOM
+            from collections import deque
+            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                last_lines = list(deque(f, maxlen=tail))
+            content = "".join(last_lines)
+            lines = content.split("\n")
+            truncated = len(last_lines) == tail
         else:
+            content = file_path.read_text(errors="ignore")
+            lines = content.split("\n")
             truncated = False
         
         return {
@@ -535,6 +542,15 @@ async def execute_command(request: CommandRequest):
             status_code=403,
             detail="不允许执行此命令。只支持 Abaqus 相关命令和基本文件查看命令。"
         )
+    
+    # 拒绝 shell 元字符，防止命令注入（如 "ls ; cat /etc/passwd"）
+    dangerous_chars = [';', '&&', '||', '|', '`', '$(', '${', '>', '<']
+    for char in dangerous_chars:
+        if char in request.command:
+            raise HTTPException(
+                status_code=403,
+                detail=f"命令包含不允许的字符: {char}"
+            )
     
     # 确定工作目录
     cwd = request.working_dir or os.getcwd()
@@ -848,7 +864,7 @@ TOOLS_SCHEMA = [
         "type": "function",
         "function": {
             "name": "host_exec",
-            "description": "在 Windows 宿主机上执行命令。用于：提交 Abaqus 作业、查看 Windows 文件、运行 Abaqus 命令。Abaqus 路径：D:\\200_Scientific\\2060_SIMULIA\\002-Commands\\abaqus.bat。示例：abaqus job=test cpus=8。cwd 必须是 Windows 路径格式。",
+            "description": "在 Windows 宿主机上执行命令。用于：提交 Abaqus 作业、查看 Windows 文件、运行 Abaqus 命令。示例：abaqus job=test cpus=8。cwd 必须是 Windows 路径格式。",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -1063,128 +1079,6 @@ class AgentChatRequest(BaseModel):
     model: str = Field("gpt-4o", description="使用的模型")
 
 
-def detect_intent_and_files(message: str, workspace_path: str, job_name: Optional[str] = None) -> dict:
-    """
-    分析用户意图，确定需要读取哪些文件
-    
-    Returns:
-        {
-            "intent": str,  # analyze_inp, check_convergence, explain_errors, etc.
-            "files_to_read": list[str],  # 需要读取的文件路径
-            "keywords": list[str],  # 检测到的关键词
-        }
-    """
-    message_lower = message.lower()
-    workspace = Path(workspace_path)
-    
-    # 检测作业名
-    detected_job = job_name
-    if not detected_job:
-        # 尝试从工作目录检测作业
-        for f in workspace.iterdir():
-            if f.suffix.lower() in [".inp", ".msg"]:
-                detected_job = f.stem
-                break
-    
-    intent = "general"
-    files_to_read = []
-    keywords = []
-
-    # 提交作业意图：不读任何文件（直接用工具操作）
-    submit_kws = ["提交", "submit", "host_exec", "job=", "运行作业", "跑作业", "重新提交", "再跑"]
-    if any(kw in message_lower for kw in submit_kws):
-        return {
-            "intent": "submit_job",
-            "files_to_read": [],
-            "keywords": [kw for kw in submit_kws if kw in message_lower],
-            "detected_job": detected_job,
-        }
-
-    # 关键词映射到意图和文件
-    intent_patterns = {
-        "analyze_inp": {
-            "keywords": ["inp", "输入文件", "input", "模型", "几何", "材料", "网格", "单元", "节点", "边界", "载荷", "接触", "分析当前"],
-            "files": [".inp"],
-            "priority": 1,
-        },
-        "check_convergence": {
-            "keywords": ["收敛", "converge", "发散", "diverge", "迭代", "iteration", "增量", "increment", "步骤", "step"],
-            "files": [".sta", ".msg"],
-            "priority": 2,
-        },
-        "explain_errors": {
-            "keywords": ["错误", "error", "警告", "warning", "问题", "失败", "fail", "报错", "异常"],
-            "files": [".msg", ".dat", ".log"],
-            "priority": 3,
-        },
-        "check_status": {
-            "keywords": ["状态", "status", "进度", "progress", "运行", "完成", "当前"],
-            "files": [".sta", ".msg", ".log"],
-            "priority": 4,
-        },
-        "analyze_mesh": {
-            "keywords": ["网格", "mesh", "单元", "element", "节点", "node", "质量", "畸变", "distort"],
-            "files": [".inp", ".dat"],
-            "priority": 5,
-        },
-        "analyze_contact": {
-            "keywords": ["接触", "contact", "穿透", "penetrat", "摩擦", "friction", "相互作用", "interaction"],
-            "files": [".inp", ".msg", ".dat"],
-            "priority": 6,
-        },
-        "analyze_materials": {
-            "keywords": ["材料", "material", "弹性", "elastic", "塑性", "plastic", "本构", "属性"],
-            "files": [".inp"],
-            "priority": 7,
-        },
-        "analyze_output": {
-            "keywords": ["输出", "output", "结果", "result", "应力", "stress", "应变", "strain", "位移", "displacement"],
-            "files": [".dat", ".odb"],
-            "priority": 8,
-        },
-    }
-    
-    # 检测意图
-    matched_intents = []
-    for intent_name, pattern in intent_patterns.items():
-        for kw in pattern["keywords"]:
-            if kw in message_lower:
-                keywords.append(kw)
-                matched_intents.append((pattern["priority"], intent_name, pattern["files"]))
-                break
-    
-    # 选择最高优先级的意图
-    if matched_intents:
-        matched_intents.sort(key=lambda x: x[0])
-        intent = matched_intents[0][1]
-        file_exts = matched_intents[0][2]
-        
-        # 构建文件路径（INP 文件超过 200KB 时跳过，让 AI 用 file_read 工具自己读）
-        if detected_job:
-            for ext in file_exts:
-                file_path = workspace / f"{detected_job}{ext}"
-                if file_path.exists():
-                    # INP 文件大于 200KB 时不预加载（避免撑爆上下文）
-                    if ext == ".inp" and file_path.stat().st_size > 200 * 1024:
-                        continue
-                    files_to_read.append(str(file_path))
-    
-    # 如果没有检测到特定意图但提到了文件类型，直接读取
-    for ext in [".inp", ".msg", ".sta", ".dat", ".log"]:
-        if ext.strip(".") in message_lower or ext in message_lower:
-            if detected_job:
-                file_path = workspace / f"{detected_job}{ext}"
-                if file_path.exists() and str(file_path) not in files_to_read:
-                    files_to_read.append(str(file_path))
-    
-    return {
-        "intent": intent,
-        "files_to_read": files_to_read,
-        "keywords": list(set(keywords)),
-        "detected_job": detected_job,
-    }
-
-
 def read_file_content(file_path: str, max_lines: int = 500, tail: bool = False) -> str:
     """读取文件内容，支持限制行数"""
     try:
@@ -1310,7 +1204,7 @@ async def agent_chat(request: AgentChatRequest):
 - **file_write**: 在 /workspace 下创建或修改文件
 - **find_path**: 搜索文件或目录
 - **host_exec**: 在 Windows 宿主机上执行命令
-  - Abaqus 在宿主机: D:\\200_Scientific\\2060_SIMULIA\\002-Commands\\abaqus.bat
+  - Abaqus 命令: {os.environ.get('ABAQUS_CMD_PATH', 'abaqus')}（可通过环境变量 ABAQUS_CMD_PATH 配置）
   - 宿主机路径示例: E:\\Desktop\\abaqus_agent\\...
   - **提交作业必须后台运行**: start /b abaqus job=<name> cpus=8（不加 start /b 会超时！）
   - 提交后用 file_read 查看 .log 和 .sta 确认作业是否开始运行

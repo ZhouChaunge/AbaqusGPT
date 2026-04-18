@@ -27,7 +27,7 @@ async def get_redis() -> redis.Redis:
 
 
 # Import provider catalog from providers module
-from .providers import PROVIDER_CATALOG, get_redis as providers_get_redis
+from .providers import PROVIDER_CATALOG
 
 
 class ModelInfo(BaseModel):

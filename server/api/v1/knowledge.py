@@ -1,6 +1,6 @@
 """Knowledge base API endpoints."""
 
-from typing import Optional, List, Dict, Any
+from typing import Optional, List
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 

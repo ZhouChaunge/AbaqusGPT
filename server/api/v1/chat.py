@@ -104,20 +104,28 @@ async def chat_stream(request: ChatRequest):
             model = request.model
             if not model:
                 model = await _get_active_model()
+            
+            from abaqusgpt.llm.client import get_llm_client
+            llm = get_llm_client(model=model)
+            
+            # 构建 system prompt
+            system_prompt = None
             if request.domain:
                 expert = DomainExpert(domain=request.domain, model=model)
-                # For now, simulate streaming by chunking the response
-                response = expert.answer(request.message, history=request.history)
+                system_prompt = expert.system_prompt
             else:
                 agent = QAAgent(model=model)
-                response = agent.answer(request.message, history=request.history)
+                system_prompt = agent.SYSTEM_PROMPT
             
-            # Simulate streaming by yielding chunks
-            chunk_size = 20
-            for i in range(0, len(response), chunk_size):
-                chunk = response[i:i + chunk_size]
+            # 真正的流式输出：透传 LLM 生成的迭代器
+            import asyncio
+            for chunk in llm.chat_stream(
+                request.message,
+                system_prompt=system_prompt,
+                history=request.history,
+            ):
                 yield f"data: {json.dumps({'content': chunk})}\n\n"
-                await asyncio.sleep(0.02)  # Small delay for effect
+                await asyncio.sleep(0)  # 让出事件循环
             
             yield f"data: {json.dumps({'done': True})}\n\n"
             

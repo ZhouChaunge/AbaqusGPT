@@ -397,7 +397,9 @@ function AgentSteps({ steps }: { steps: AgentStep[] }) {
         // Standalone tool_result
         if (key === 'tool_result') {
           const isExpanded = expandedIdx.has(idx)
-          const fullOut = (step as any).full_output
+          const fullOut = 'full_output' in step && typeof step.full_output === 'string'
+            ? step.full_output
+            : undefined
           return (
             <div key={gi} className="rounded-lg border border-[#30363d] bg-[#0d1117] overflow-hidden text-xs">
               <div className={`px-3 py-1.5 flex items-center gap-2 ${fullOut ? 'cursor-pointer hover:bg-[#161b22]' : ''}`}
@@ -569,14 +571,13 @@ function ResizeHandle({ onMouseDown }: { onMouseDown: (e: React.MouseEvent) => v
 // Models & Quick actions
 // ============================================================
 
+// 模型列表与后端 MODEL_MAPPING 保持一致
+// TODO: 改为从 /api/v1/models/ 动态拉取
 const AVAILABLE_MODELS = [
   { id: 'gpt-4o', label: 'GPT-4o', badge: 'OpenAI', color: 'text-emerald-400' },
   { id: 'gpt-4o-mini', label: 'GPT-4o Mini', badge: 'OpenAI', color: 'text-emerald-400' },
-  { id: 'claude-opus-4-5', label: 'Claude Opus 4.5', badge: 'Anthropic', color: 'text-orange-400' },
-  { id: 'claude-sonnet-4-5', label: 'Claude Sonnet 4.5', badge: 'Anthropic', color: 'text-orange-400' },
   { id: 'claude-3-7-sonnet-20250219', label: 'Claude 3.7 Sonnet', badge: 'Anthropic', color: 'text-orange-400' },
   { id: 'deepseek-chat', label: 'DeepSeek Chat', badge: 'DeepSeek', color: 'text-blue-400' },
-  { id: 'deepseek/deepseek-r1', label: 'DeepSeek R1', badge: 'DeepSeek', color: 'text-blue-400' },
 ]
 
 const QUICK_QUESTIONS = [

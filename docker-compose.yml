@@ -25,8 +25,8 @@ services:
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
-      # 本地 Abaqus 工作目录映射 - 可根据需要修改
-      - E:/Desktop/abaqus_agent:/workspace
+      # 本地 Abaqus 工作目录映射 - 可通过 WORKSPACE_HOST_PATH 覆盖，默认使用项目内 ./workspace
+      - ${WORKSPACE_HOST_PATH:-./workspace}:/workspace
     depends_on:
       - redis
       - postgres
