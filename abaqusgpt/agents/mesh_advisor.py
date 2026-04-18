@@ -20,9 +20,9 @@ class MeshAdvisor:
         "min_angle_tri": {"good": 30, "warning": 15, "bad": 5},
     }
     
-    def __init__(self):
+    def __init__(self, model: str = None):
         self.inp_parser = InpParser()
-        self.llm = get_llm_client()
+        self.llm = get_llm_client(model=model)
     
     def analyze(self, file_path: Path) -> str:
         """

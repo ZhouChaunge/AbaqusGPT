@@ -6,8 +6,8 @@ from ..llm.client import get_llm_client
 class InpGenerator:
     """Agent for generating Abaqus inp files or Python scripts."""
     
-    def __init__(self):
-        self.llm = get_llm_client()
+    def __init__(self, model: str = None):
+        self.llm = get_llm_client(model=model)
     
     def generate(self, description: str, format: str = "inp") -> str:
         """

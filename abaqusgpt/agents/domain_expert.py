@@ -10,6 +10,15 @@ class DomainExpert:
     """Agent with specialized domain knowledge."""
     
     DOMAIN_PROMPTS = {
+        "general": """你是一位通用 Abaqus 有限元分析专家，精通：
+- Abaqus/CAE 建模和网格划分
+- Abaqus/Standard 和 Abaqus/Explicit 求解器
+- 各类材料模型和本构关系
+- 边界条件和载荷定义
+- 接触和相互作用设置
+- 收敛问题诊断和解决
+- Python 脚本自动化""",
+
         "geotechnical": """你是一位岩土工程有限元分析专家，精通：
 - 本构模型：Mohr-Coulomb、Drucker-Prager、修正剑桥模型 (Cam-Clay)、Hoek-Brown
 - 土-结构相互作用 (SSI)
@@ -83,15 +92,16 @@ class DomainExpert:
 - 压电材料建模""",
     }
     
-    def __init__(self, domain: str):
+    def __init__(self, domain: str, model: str = None):
         """
         Initialize domain expert.
         
         Args:
-            domain: Engineering domain (geotechnical, structural, etc.)
+            domain: Engineering domain (geotechnical, structural, general, etc.)
+            model: LLM model to use
         """
         self.domain = domain
-        self.llm = get_llm_client()
+        self.llm = get_llm_client(model=model)
         
         if domain not in self.DOMAIN_PROMPTS:
             raise ValueError(f"Unknown domain: {domain}")

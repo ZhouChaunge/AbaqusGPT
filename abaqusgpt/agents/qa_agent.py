@@ -32,8 +32,8 @@ Guidelines:
 Respond in Chinese unless the user asks in English.
 """
     
-    def __init__(self):
-        self.llm = get_llm_client()
+    def __init__(self, model: str = None):
+        self.llm = get_llm_client(model=model)
     
     def answer(self, question: str) -> str:
         """

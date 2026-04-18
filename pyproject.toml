@@ -4,13 +4,13 @@ build-backend = "hatchling.build"
 
 [project]
 name = "abaqusgpt"
-version = "0.1.0"
+version = "0.2.0"
 description = "Your AI copilot for Abaqus: modeling, meshing, convergence debugging, and beyond."
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
 authors = [
-    { name = "ZhouChaunge" }
+    { name = "ZhouChuange" }
 ]
 keywords = [
     "abaqus",
@@ -37,7 +37,14 @@ dependencies = [
     "rich>=13.0.0",
     "litellm>=1.0.0",
     "pydantic>=2.0.0",
+    "pydantic-settings>=2.1.0",
     "python-dotenv>=1.0.0",
+    "fastapi>=0.109.0",
+    "uvicorn[standard]>=0.25.0",
+    "httpx>=0.26.0",
+    "aiofiles>=23.2.0",
+    "python-multipart>=0.0.6",
+    "sse-starlette>=1.8.0",
 ]
 
 [project.optional-dependencies]
@@ -56,9 +63,9 @@ rag = [
 abaqusgpt = "abaqusgpt.cli:app"
 
 [project.urls]
-Homepage = "https://github.com/ZhouChaunge/AbaqusGPT"
-Repository = "https://github.com/ZhouChaunge/AbaqusGPT"
-Issues = "https://github.com/ZhouChaunge/AbaqusGPT/issues"
+Homepage = "https://github.com/ZhouChuange/AbaqusGPT"
+Repository = "https://github.com/ZhouChuange/AbaqusGPT"
+Issues = "https://github.com/ZhouChuange/AbaqusGPT/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["abaqusgpt"]

@@ -16,10 +16,10 @@ console = Console()
 class ConvergeDoctor:
     """Agent for diagnosing Abaqus convergence issues."""
     
-    def __init__(self):
+    def __init__(self, model: str = None):
         self.msg_parser = MsgParser()
         self.sta_parser = StaParser()
-        self.llm = get_llm_client()
+        self.llm = get_llm_client(model=model)
     
     def diagnose(self, file_path: Path, verbose: bool = False) -> str:
         """
