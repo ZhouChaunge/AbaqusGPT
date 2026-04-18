@@ -2,31 +2,52 @@
 # This file configures Google's Gemini Code Assist for PR reviews
 # Docs: https://cloud.google.com/gemini/docs/code-assist
 
-# Language for code review comments
-language: "en"
+# Language for code review comments (supports "en", "zh-CN", etc.)
+language: "zh-CN"
 
 # Code review settings
 code_review:
   # Enable automatic code review on PR
   enabled: true
   
-  # Review scope
-  scope:
-    - "*.py"
-    - "*.js"
-    - "*.ts"
-    - "*.tsx"
-    - "*.yml"
-    - "*.yaml"
+  # Minimum severity level for comments
+  # Options: critical, high, medium, low
+  # - critical: Only security vulnerabilities and crash bugs
+  # - high: Important bugs and performance issues
+  # - medium: Best practices and code quality (recommended)
+  # - low: Style suggestions and minor improvements
+  comment_severity: "medium"
   
-  # Focus areas
+  # Review scope - file patterns to include
+  scope:
+    - "**/*.py"
+    - "**/*.js"
+    - "**/*.ts"
+    - "**/*.tsx"
+    - "**/*.yml"
+    - "**/*.yaml"
+  
+  # Exclude patterns
+  exclude:
+    - "**/node_modules/**"
+    - "**/__pycache__/**"
+    - "**/dist/**"
+    - "**/*.min.js"
+  
+  # Focus areas for review
   focus:
     - security
     - performance
     - best_practices
     - readability
-    - documentation
+    - error_handling
 
 # Chat settings for inline discussions
 chat:
   enabled: true
+  
+# Pull request summary settings
+pull_request_summary:
+  enabled: true
+  # Generate summary in Chinese
+  language: "zh-CN"
