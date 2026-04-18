@@ -46,6 +46,7 @@ dependencies = [
     "python-multipart>=0.0.6",
     "sse-starlette>=1.8.0",
     "redis>=5.0.0",
+    "cryptography>=41.0.0",
 ]
 
 [project.optional-dependencies]

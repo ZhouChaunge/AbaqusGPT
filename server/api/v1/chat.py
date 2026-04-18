@@ -6,11 +6,25 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 import json
+import redis.asyncio as aioredis
 
 from abaqusgpt.agents.qa_agent import QAAgent
 from abaqusgpt.agents.domain_expert import DomainExpert
 
 router = APIRouter()
+
+_redis_pool = None
+
+async def _get_active_model() -> Optional[str]:
+    """Read the active model from Redis."""
+    global _redis_pool
+    try:
+        from ...core.config import settings
+        if _redis_pool is None:
+            _redis_pool = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
+        return await _redis_pool.get("active_model")
+    except Exception:
+        return None
 
 
 class Message(BaseModel):
@@ -23,6 +37,7 @@ class ChatRequest(BaseModel):
     """Request model for chat."""
     message: str = Field(..., description="User message")
     domain: Optional[str] = Field(None, description="Engineering domain")
+    model: Optional[str] = Field(None, description="LLM model to use")
     history: List[Message] = Field(default_factory=list, description="Conversation history")
     
     class Config:
@@ -58,12 +73,15 @@ async def chat(request: ChatRequest):
     - electromagnetic: 电磁分析
     """
     try:
+        model = request.model
+        if not model:
+            model = await _get_active_model()
         if request.domain:
-            expert = DomainExpert(domain=request.domain)
+            expert = DomainExpert(domain=request.domain, model=model)
             response = expert.answer(request.message, history=request.history)
         else:
-            agent = QAAgent()
-            response = agent.answer(request.message)
+            agent = QAAgent(model=model)
+            response = agent.answer(request.message, history=request.history)
         
         return ChatResponse(
             response=response,
@@ -83,13 +101,16 @@ async def chat_stream(request: ChatRequest):
     """
     async def generate():
         try:
+            model = request.model
+            if not model:
+                model = await _get_active_model()
             if request.domain:
-                expert = DomainExpert(domain=request.domain)
+                expert = DomainExpert(domain=request.domain, model=model)
                 # For now, simulate streaming by chunking the response
                 response = expert.answer(request.message, history=request.history)
             else:
-                agent = QAAgent()
-                response = agent.answer(request.message)
+                agent = QAAgent(model=model)
+                response = agent.answer(request.message, history=request.history)
             
             # Simulate streaming by yielding chunks
             chunk_size = 20

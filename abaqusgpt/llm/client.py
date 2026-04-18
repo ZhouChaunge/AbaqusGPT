@@ -9,67 +9,79 @@ from ..config import config
 # Model name mapping for LiteLLM
 # LiteLLM uses specific prefixes for different providers
 MODEL_MAPPING = {
-    # OpenAI
+    # OpenAI (2026 latest)
     "gpt-4o": "gpt-4o",
+    "gpt-4o-mini": "gpt-4o-mini",
     "gpt-4-turbo": "gpt-4-turbo",
-    "gpt-4": "gpt-4",
-    "gpt-3.5-turbo": "gpt-3.5-turbo",
+    "o1": "o1",
+    "o1-mini": "o1-mini",
+    "o3-mini": "o3-mini",
     
-    # Anthropic
-    "claude-3-opus": "claude-3-opus-20240229",
-    "claude-3-sonnet": "claude-3-sonnet-20240229",
-    "claude-3-haiku": "claude-3-haiku-20240307",
+    # Anthropic (Claude 4 series - 2026 latest)
+    "claude-sonnet-4": "anthropic/claude-sonnet-4-20260401",
+    "claude-opus-4": "anthropic/claude-opus-4-20260401",
+    "claude-3.5-sonnet": "anthropic/claude-3-5-sonnet-20241022",
+    "claude-3.5-haiku": "anthropic/claude-3-5-haiku-20241022",
+    "claude-3-opus": "anthropic/claude-3-opus-20240229",
     
-    # 智谱 GLM (Zhipu)
+    # Google Gemini
+    "gemini-2.0-flash": "gemini/gemini-2.0-flash",
+    "gemini-1.5-pro": "gemini/gemini-1.5-pro",
+    "gemini-1.5-flash": "gemini/gemini-1.5-flash",
+    
+    # 智谱 GLM (Zhipu) - 2026 latest
+    "glm-4-plus": "zhipu/glm-4-plus",
     "glm-4": "zhipu/glm-4",
-    "glm-4v": "zhipu/glm-4v",
-    "glm-3-turbo": "zhipu/glm-3-turbo",
+    "glm-4v-plus": "zhipu/glm-4v-plus",
+    "glm-4-flash": "zhipu/glm-4-flash",
     
-    # 通义千问 (Qwen / DashScope)
+    # 通义千问 (Qwen / DashScope) - Qwen 2.5 series
     "qwen-max": "dashscope/qwen-max",
     "qwen-plus": "dashscope/qwen-plus",
     "qwen-turbo": "dashscope/qwen-turbo",
-    "qwen-vl-max": "dashscope/qwen-vl-max",
+    "qwen2.5-72b": "dashscope/qwen2.5-72b-instruct",
+    "qwen2.5-coder": "dashscope/qwen2.5-coder-32b-instruct",
     
-    # DeepSeek
-    "deepseek-chat": "deepseek/deepseek-chat",
+    # DeepSeek - V3 and R1 series
+    "deepseek-v3": "deepseek/deepseek-chat",
+    "deepseek-r1": "deepseek/deepseek-reasoner",
     "deepseek-coder": "deepseek/deepseek-coder",
     
     # 百度文心 (ERNIE)
-    "ernie-4.0": "ernie/ernie-4.0-8k",
-    "ernie-3.5-turbo": "ernie/ernie-3.5-8k",
+    "ernie-4.0": "qianfan/ernie-4.0-8k",
+    "ernie-4.0-turbo": "qianfan/ernie-4.0-turbo-8k",
     
     # 月之暗面 Kimi (Moonshot)
-    "moonshot-v1-8k": "moonshot/moonshot-v1-8k",
-    "moonshot-v1-32k": "moonshot/moonshot-v1-32k",
+    "kimi-latest": "moonshot/moonshot-v1-auto",
     "moonshot-v1-128k": "moonshot/moonshot-v1-128k",
+    "moonshot-v1-32k": "moonshot/moonshot-v1-32k",
     
-    # 零一万物 (Yi)
+    # 零一万物 (Yi) - Yi-Lightning series
+    "yi-lightning": "yi/yi-lightning",
     "yi-large": "yi/yi-large",
     "yi-medium": "yi/yi-medium",
-    "yi-spark": "yi/yi-spark",
     
     # 百川 (Baichuan)
     "baichuan4": "baichuan/Baichuan4",
     "baichuan3-turbo": "baichuan/Baichuan3-Turbo",
     
     # 阶跃星辰 (StepFun)
-    "step-1-8k": "stepfun/step-1-8k",
-    "step-1-32k": "stepfun/step-1-32k",
-    "step-1v-8k": "stepfun/step-1v-8k",
+    "step-2": "stepfun/step-2-16k",
+    "step-1-128k": "stepfun/step-1-128k",
+    "step-1v": "stepfun/step-1v-32k",
     
     # MiniMax
+    "abab7-chat": "minimax/abab7-chat",
     "abab6.5-chat": "minimax/abab6.5-chat",
-    "abab5.5-chat": "minimax/abab5.5-chat",
     
     # 硅基流动 (SiliconFlow) - uses OpenAI-compatible API
-    "siliconflow-deepseek": "openai/deepseek-ai/DeepSeek-V2.5",
+    "siliconflow-deepseek-v3": "openai/deepseek-ai/DeepSeek-V3",
     "siliconflow-qwen": "openai/Qwen/Qwen2.5-72B-Instruct",
     
     # Ollama (local)
-    "ollama-llama3": "ollama/llama3",
-    "ollama-qwen2": "ollama/qwen2",
-    "ollama-codellama": "ollama/codellama",
+    "ollama-llama3.3": "ollama/llama3.3",
+    "ollama-qwen2.5": "ollama/qwen2.5",
+    "ollama-deepseek-r1": "ollama/deepseek-r1",
 }
 
 
@@ -154,19 +166,20 @@ class LLMClient:
     def list_available_models() -> dict[str, list[str]]:
         """Return available models grouped by provider."""
         return {
-            "OpenAI": ["gpt-4o", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"],
-            "Anthropic": ["claude-3-opus", "claude-3-sonnet", "claude-3-haiku"],
-            "智谱 GLM": ["glm-4", "glm-4v", "glm-3-turbo"],
-            "通义千问 Qwen": ["qwen-max", "qwen-plus", "qwen-turbo", "qwen-vl-max"],
-            "DeepSeek": ["deepseek-chat", "deepseek-coder"],
-            "百度文心 ERNIE": ["ernie-4.0", "ernie-3.5-turbo"],
-            "月之暗面 Kimi": ["moonshot-v1-8k", "moonshot-v1-32k", "moonshot-v1-128k"],
-            "零一万物 Yi": ["yi-large", "yi-medium", "yi-spark"],
+            "OpenAI": ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "o1", "o1-mini", "o3-mini"],
+            "Anthropic": ["claude-sonnet-4", "claude-opus-4", "claude-3.5-sonnet", "claude-3.5-haiku", "claude-3-opus"],
+            "Google Gemini": ["gemini-2.0-flash", "gemini-1.5-pro", "gemini-1.5-flash"],
+            "智谱 GLM": ["glm-4-plus", "glm-4", "glm-4v-plus", "glm-4-flash"],
+            "通义千问 Qwen": ["qwen-max", "qwen-plus", "qwen-turbo", "qwen2.5-72b", "qwen2.5-coder"],
+            "DeepSeek": ["deepseek-v3", "deepseek-r1", "deepseek-coder"],
+            "百度文心 ERNIE": ["ernie-4.0", "ernie-4.0-turbo"],
+            "月之暗面 Kimi": ["kimi-latest", "moonshot-v1-128k", "moonshot-v1-32k"],
+            "零一万物 Yi": ["yi-lightning", "yi-large", "yi-medium"],
             "百川 Baichuan": ["baichuan4", "baichuan3-turbo"],
-            "阶跃星辰 Step": ["step-1-8k", "step-1-32k", "step-1v-8k"],
-            "MiniMax": ["abab6.5-chat", "abab5.5-chat"],
-            "硅基流动 SiliconFlow": ["siliconflow-deepseek", "siliconflow-qwen"],
-            "Ollama (本地)": ["ollama-llama3", "ollama-qwen2", "ollama-codellama"],
+            "阶跃星辰 Step": ["step-2", "step-1-128k", "step-1v"],
+            "MiniMax": ["abab7-chat", "abab6.5-chat"],
+            "硅基流动 SiliconFlow": ["siliconflow-deepseek-v3", "siliconflow-qwen"],
+            "Ollama (本地)": ["ollama-llama3.3", "ollama-qwen2.5", "ollama-deepseek-r1"],
         }
     
     def chat(
@@ -175,6 +188,7 @@ class LLMClient:
         system_prompt: Optional[str] = None,
         temperature: Optional[float] = None,
         max_tokens: int = 4096,
+        history: Optional[list] = None,
     ) -> str:
         """
         Send a chat message and get a response.
@@ -184,6 +198,7 @@ class LLMClient:
             system_prompt: Optional system prompt
             temperature: Sampling temperature (0-1)
             max_tokens: Maximum response tokens
+            history: Conversation history as list of {role, content} dicts
             
         Returns:
             Assistant response text
@@ -192,6 +207,18 @@ class LLMClient:
         
         if system_prompt:
             messages.append({"role": "system", "content": system_prompt})
+        
+        # Add conversation history
+        if history:
+            for msg in history:
+                # Support both Pydantic models and plain dicts
+                if hasattr(msg, 'role'):
+                    role = msg.role
+                    content = msg.content
+                else:
+                    role = msg.get("role", "user")
+                    content = msg.get("content", "")
+                messages.append({"role": role, "content": content})
         
         messages.append({"role": "user", "content": message})
         
@@ -211,6 +238,7 @@ class LLMClient:
         message: str,
         system_prompt: Optional[str] = None,
         temperature: Optional[float] = None,
+        history: Optional[list] = None,
     ) -> Generator[str, None, None]:
         """
         Send a chat message and stream the response.
@@ -219,6 +247,7 @@ class LLMClient:
             message: User message
             system_prompt: Optional system prompt
             temperature: Sampling temperature (0-1)
+            history: Conversation history as list of {role, content} dicts
             
         Yields:
             Response text chunks
@@ -227,6 +256,18 @@ class LLMClient:
         
         if system_prompt:
             messages.append({"role": "system", "content": system_prompt})
+        
+        # Add conversation history
+        if history:
+            for msg in history:
+                # Support both Pydantic models and plain dicts
+                if hasattr(msg, 'role'):
+                    role = msg.role
+                    content = msg.content
+                else:
+                    role = msg.get("role", "user")
+                    content = msg.get("content", "")
+                messages.append({"role": role, "content": content})
         
         messages.append({"role": "user", "content": message})
         

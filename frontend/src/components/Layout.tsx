@@ -1,10 +1,11 @@
 import { Outlet, NavLink } from 'react-router-dom'
-import { MessageSquare, FileSearch, Wand2, BookOpen, Github, Menu, X } from 'lucide-react'
+import { MessageSquare, FileSearch, Wand2, BookOpen, Github, Menu, X, Activity } from 'lucide-react'
 import { useState } from 'react'
 
 const navItems = [
   { path: '/', icon: MessageSquare, label: '智能对话' },
-  { path: '/diagnose', icon: FileSearch, label: '错误诊断' },
+  { path: '/monitor', icon: Activity, label: '实时监控' },
+  { path: '/diagnose', icon: FileSearch, label: '文件诊断' },
   { path: '/generate', icon: Wand2, label: '模型生成' },
   { path: '/knowledge', icon: BookOpen, label: '知识库' },
 ]

@@ -19,11 +19,14 @@ services:
       - ABAQUSGPT_LLM_MODEL=${LLM_MODEL:-gpt-4}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
       - REDIS_URL=redis://redis:6379
       - DATABASE_URL=postgresql://abaqusgpt:abaqusgpt@postgres:5432/abaqusgpt
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
+      # 本地 Abaqus 工作目录映射 - 可根据需要修改
+      - E:/Desktop/abaqus_agent:/workspace
     depends_on:
       - redis
       - postgres

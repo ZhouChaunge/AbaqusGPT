@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { Send, Loader2, Settings2, Trash2 } from 'lucide-react'
+import { Send, Loader2, Settings2, Trash2, Key } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import DomainSelector from '../components/DomainSelector'
+import ModelSelector from '../components/ModelSelector'
+import ProviderSettings from '../components/ProviderSettings'
 import ConversationSidebar, {
   type ConversationSummary,
 } from '../components/ConversationSidebar'
@@ -32,7 +34,10 @@ export default function ChatPage() {
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [domain, setDomain] = useState('general')
+  const [model, setModel] = useState('gpt-4o')
   const [showSettings, setShowSettings] = useState(false)
+  const [showProviderSettings, setShowProviderSettings] = useState(false)
+  const [modelRefresh, setModelRefresh] = useState(0)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   // Conversation state
@@ -169,6 +174,7 @@ export default function ChatPage() {
         body: JSON.stringify({
           message: userMessage.content,
           domain,
+          model,
           history: messages.slice(-10).map((m) => ({
             role: m.role,
             content: m.content,
@@ -277,6 +283,14 @@ export default function ChatPage() {
           <p className="text-sm text-dark-400">与 AI 讨论 Abaqus 相关问题</p>
         </div>
         <div className="flex items-center gap-2">
+          <ModelSelector value={model} onChange={setModel} refreshTrigger={modelRefresh} />
+          <button
+            onClick={() => setShowProviderSettings(true)}
+            className="p-2 rounded-lg hover:bg-dark-800 transition-colors"
+            title="API Key 管理"
+          >
+            <Key className="w-5 h-5 text-dark-400" />
+          </button>
           <button
             onClick={() => setShowSettings(!showSettings)}
             className="p-2 rounded-lg hover:bg-dark-800 transition-colors"
@@ -291,6 +305,13 @@ export default function ChatPage() {
           </button>
         </div>
       </header>
+
+      {/* Provider Settings Modal */}
+      <ProviderSettings
+        isOpen={showProviderSettings}
+        onClose={() => setShowProviderSettings(false)}
+        onKeysChanged={() => setModelRefresh((n) => n + 1)}
+      />
 
       {/* Settings panel */}
       {showSettings && (
