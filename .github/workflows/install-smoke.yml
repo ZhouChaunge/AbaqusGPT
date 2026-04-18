@@ -5,7 +5,7 @@ name: Install Smoke
 on:
   pull_request:
   push:
-    branches: [master]
+    branches: [main, master]
 
 jobs:
   # ── Python 代码质量 ──────────────────────────────────────────

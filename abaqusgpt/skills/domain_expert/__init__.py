@@ -118,7 +118,7 @@ class DomainExpertSkill(Skill):
             }
 
         domain = context.get("domain", "general")
-        context.get("history", [])
+        history = context.get("history", [])
 
         # Build system prompt
         system_prompt = self._build_system_prompt(domain)
@@ -138,6 +138,7 @@ class DomainExpertSkill(Skill):
         answer = self.llm.chat(
             full_question,
             system_prompt=system_prompt,
+            history=history,
         )
 
         # Extract references and code examples
