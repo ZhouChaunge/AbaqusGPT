@@ -57,7 +57,7 @@ def test_single_model(model_name: str) -> tuple[bool, str, float]:
 def test_all_configured_models():
     """Test all models that have API keys configured."""
     available_models = LLMClient.list_available_models()
-    config.get_available_providers()
+    configured_providers = config.get_available_providers()
 
     results = []
 
@@ -68,7 +68,9 @@ def test_all_configured_models():
     ) as progress:
         for provider, models in available_models.items():
             # Check if provider is likely configured
-            provider.lower().split()[0]
+            provider_key = provider.lower().split()[0]
+            if configured_providers and provider_key not in [p.lower() for p in configured_providers]:
+                continue
 
             for model in models:
                 task = progress.add_task(f"Testing {model}...", total=None)

@@ -939,6 +939,18 @@ TOOLS_SCHEMA = [
 ]
 
 
+def _validate_path(path: str, workspace_path: str) -> Path:
+    """Resolve path and ensure it stays within workspace_path.
+
+    Raises ValueError if path escapes the workspace.
+    """
+    ws = Path(workspace_path).resolve()
+    resolved = Path(path).resolve()
+    if not (resolved == ws or str(resolved).startswith(str(ws) + os.sep)):
+        raise ValueError(f"安全限制：路径 {path} 不在工作空间 {workspace_path} 内")
+    return resolved
+
+
 async def run_tool(tool_name: str, params: dict, workspace_path: str) -> str:
     """执行一个工具并返回结果字符串。"""
     if tool_name == "shell_exec":
@@ -976,7 +988,7 @@ async def run_tool(tool_name: str, params: dict, workspace_path: str) -> str:
     elif tool_name == "file_list":
         path = params.get("path", workspace_path).strip()
         try:
-            p = Path(path)
+            p = _validate_path(path, workspace_path)
             if not p.exists():
                 return f"路径不存在: {path}"
             if not p.is_dir():
@@ -1005,12 +1017,16 @@ async def run_tool(tool_name: str, params: dict, workspace_path: str) -> str:
         if not path:
             return "错误：path 为空"
         try:
+            validated = _validate_path(path, workspace_path)
+        except ValueError as e:
+            return str(e)
+        try:
             max_lines = int(params.get("max_lines", 200))
         except (ValueError, TypeError):
             max_lines = 200
         tail = str(params.get("tail", "false")).lower() in ("true", "1", "yes")
         try:
-            content = _read_file_content(Path(path), max_lines=max_lines, tail=tail)
+            content = _read_file_content(validated, max_lines=max_lines, tail=tail)
             return f"文件 {path}:\n{content}"
         except FileNotFoundError:
             return f"文件不存在: {path}"
@@ -1018,9 +1034,14 @@ async def run_tool(tool_name: str, params: dict, workspace_path: str) -> str:
             return f"读取失败: {e}"
 
     elif tool_name == "find_path":
+        import shlex
         name = params.get("name", "").strip()
         if not name:
             return "错误：name 参数为空"
+        # 校验 name 只允许安全字符（字母、数字、点、下划线、连字符、星号、问号）
+        import re
+        if not re.match(r'^[\w.*?\-]+$', name):
+            return f"安全限制：name 参数包含不允许的字符: {name}"
         search_in = params.get("search_in", "/usr /opt /home /workspace /SIMULIA").strip()
         try:
             max_depth = int(params.get("max_depth", 6))
@@ -1030,14 +1051,18 @@ async def run_tool(tool_name: str, params: dict, workspace_path: str) -> str:
         dirs = [d for d in search_in.split() if Path(d).exists()]
         if not dirs:
             return f"指定的搜索目录均不存在: {search_in}"
-        type_opt = f"-type {type_flag}" if type_flag in ["f", "d"] else ""
-        cmd = f"find {' '.join(dirs)} -maxdepth {max_depth} -name '{name}' {type_opt} 2>/dev/null | head -30"
+        # 使用 argv list 而非 shell=True 来防止命令注入
+        cmd_args = ["find"] + dirs + ["-maxdepth", str(max_depth), "-name", name]
+        if type_flag in ["f", "d"]:
+            cmd_args += ["-type", type_flag]
         try:
             proc = subprocess.run(
-                cmd, shell=True, capture_output=True, text=True, timeout=30,  # nosec B602
-                executable="/bin/bash" if sys.platform != "win32" else None,
+                cmd_args, shell=False, capture_output=True, text=True, timeout=30,  # nosec B603
             )
             output = proc.stdout.strip()
+            # 只取前 30 行
+            lines = output.split("\n")[:30]
+            output = "\n".join(lines)
             if not output:
                 return f"未找到匹配 '{name}' 的结果（搜索范围: {search_in}）"
             return f"找到以下匹配:\n{output}"
@@ -1114,15 +1139,18 @@ async def run_tool(tool_name: str, params: dict, workspace_path: str) -> str:
         if not job_dir or not job_name:
             return "错误：job_dir 和 job_name 都是必填参数"
 
-        from abaqusgpt.agents.converge_doctor import ConvergeDoctor
+        try:
+            validated_dir = _validate_path(job_dir, workspace_path)
+        except ValueError as e:
+            return str(e)
+
         from abaqusgpt.parsers.msg_parser import MsgParser
         from abaqusgpt.parsers.sta_parser import StaParser
 
-        job_path = Path(job_dir)
-        msg_file = job_path / f"{job_name}.msg"
-        sta_file = job_path / f"{job_name}.sta"
+        msg_file = validated_dir / f"{job_name}.msg"
+        sta_file = validated_dir / f"{job_name}.sta"
 
-        result_parts = {"job_name": job_name, "diagnosis": {}}
+        result_parts = {"job_name": job_name}
 
         # 解析 .msg 文件
         if msg_file.exists():
@@ -1175,7 +1203,10 @@ async def run_tool(tool_name: str, params: dict, workspace_path: str) -> str:
         if not inp_file:
             return "错误：inp_file 是必填参数"
 
-        inp_path = Path(inp_file)
+        try:
+            inp_path = _validate_path(inp_file, workspace_path)
+        except ValueError as e:
+            return str(e)
         if not inp_path.exists():
             return f"文件不存在: {inp_file}"
 
@@ -1228,8 +1259,10 @@ async def run_tool(tool_name: str, params: dict, workspace_path: str) -> str:
             return "错误：description 是必填参数"
         if not output_path:
             return "错误：output_path 是必填参数"
-        if not output_path.startswith("/workspace"):
-            return f"安全限制：输出路径必须在 /workspace 下，拒绝: {output_path}"
+        try:
+            out_path = _validate_path(output_path, workspace_path)
+        except ValueError as e:
+            return str(e)
 
         from abaqusgpt.agents.inp_generator import InpGenerator
 
@@ -1241,7 +1274,6 @@ async def run_tool(tool_name: str, params: dict, workspace_path: str) -> str:
             content = generator.generate(description, format=fmt)
 
             # 写入文件
-            out_path = Path(output_path)
             out_path.parent.mkdir(parents=True, exist_ok=True)
             out_path.write_text(content, encoding="utf-8")
 
@@ -1264,10 +1296,15 @@ async def run_tool(tool_name: str, params: dict, workspace_path: str) -> str:
         if not job_dir or not job_name:
             return "错误：job_dir 和 job_name 都是必填参数"
 
+        try:
+            validated_dir = _validate_path(job_dir, workspace_path)
+        except ValueError as e:
+            return str(e)
+
         from abaqusgpt.parsers.msg_parser import MsgParser
         from abaqusgpt.parsers.sta_parser import StaParser
 
-        job_path = Path(job_dir)
+        job_path = validated_dir
         result = {"job_name": job_name, "output_type": output_type}
 
         sta_file = job_path / f"{job_name}.sta"

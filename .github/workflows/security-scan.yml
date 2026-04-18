@@ -10,7 +10,7 @@ on:
       - "pyproject.toml"
       - ".github/workflows/security-scan.yml"
   push:
-    branches: [master]
+    branches: [main, master]
     paths:
       - "**/*.py"
       - "requirements.txt"

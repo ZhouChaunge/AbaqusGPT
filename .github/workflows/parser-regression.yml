@@ -11,7 +11,7 @@ on:
       - "requirements.txt"
       - ".github/workflows/parser-regression.yml"
   push:
-    branches: [master]
+    branches: [main, master]
     paths:
       - "abaqusgpt/**"
       - "tests/**"
